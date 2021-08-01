@@ -31,12 +31,14 @@ G_modularity = None
 
 ACTIVITY_BASELINE=0 # 0.2
 SIMILARITY_FACTOR=2.5 # 0.2
+QVAL_NORM=1.3
+MIN_N_OF_GENES=4
 def extract_scores(scores_file):
     """"""
     scores = pd.read_csv(scores_file, sep='\t', index_col=0)
     if "qval" in scores.columns:
 
-        scores["score"] = -np.log10(scores["qval"])/1.3
+        scores["score"] = -np.log10(scores["qval"])/QVAL_NORM
     else:
         scores = pd.read_csv(scores_file, sep='\t', index_col=0, header=None, dtype=str)
         scores["score"] = 1
@@ -170,7 +172,7 @@ def update_subslice_probabilities(subslices, new_subslice, modified_subslice_ind
 def modify_subslice(cur_subslice, cur_slice, t):
     step = np.random.binomial(1, 0.5)
     modified_slice = None
-    if (step or len(cur_subslice.nodes) < 4) and len(cur_subslice.nodes) < len(cur_slice.nodes) :
+    if (step or len(cur_subslice.nodes) < MIN_N_OF_GENES) and len(cur_subslice.nodes) < len(cur_slice.nodes) :
         modified_slice = add_to_subslice(cur_subslice, cur_slice, t)
     else:
         modified_slice = remove_from_subslice(cur_subslice, t)
