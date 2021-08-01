@@ -1,0 +1,11 @@
+/python
+/.idea
+/build
+/data/emp_test/go/gene2go
+/dist
+/*.egg-info/
+*.pyc
+/src/sh/*.sh
+*.swp
+/emp-env
+
