@@ -21,7 +21,7 @@ cd bnet
 
 Bnet is written in Python 3.6. We recommend using a virtual environment. in Linux:
 ```
-python -m venv bnet-env
+python3 -m venv bnet-env
 source bnet-env/bin/activate
 ```
 
