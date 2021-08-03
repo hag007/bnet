@@ -11,7 +11,7 @@
 
 ## Set your environment
 
-Download the sources and install according to the following:
+Download the sources and install according to the following instruction:
 
 Clone the repo from github:
 ```
