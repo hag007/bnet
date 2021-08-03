@@ -63,7 +63,7 @@ class AbstractRunner(object):
         open(self.full_path, 'w+').write(f"{toc-tic:0.2f}")
   
         print(f"calculate GO enrichment for {len(modules)} modules")
-        self.build_all_reports(self.ALGO_NAME, modules, all_bg_genes, os.path.abspath(go_folder), os.path.abspath(os.path.join(output_folder, "report")))
+        self.build_all_reports(self.ALGO_NAME, modules, all_bg_genes, os.path.abspath(go_folder), os.path.abspath(os.path.join(output_folder, "modules")))
 
 
 
@@ -71,4 +71,4 @@ class AbstractRunner(object):
         print(f'about to run algo with the following parameters: {os.path.abspath(dataset_file_name)}, {os.path.abspath(network_file_name)}, {os.path.abspath(output_folder)}, {kwargs}')
 
         modules, all_bg_genes = self.run(os.path.abspath(dataset_file_name), os.path.abspath(network_file_name), os.path.abspath(output_folder), **kwargs)
-        self.build_all_reports(self.ALGO_NAME, modules, all_bg_genes, os.path.abspath(go_folder), os.path.abspath(os.path.join(output_folder, "report")))
+        self.build_all_reports(self.ALGO_NAME, modules, all_bg_genes, os.path.abspath(go_folder), os.path.abspath(os.path.join(output_folder, "modules")))

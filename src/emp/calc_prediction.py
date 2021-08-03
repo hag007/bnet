@@ -36,24 +36,33 @@ def main():
     network_file = args.network_file
     go_folder = args.go_folder
     true_solutions_folder = args.true_solutions_folder
-    additional_args = args.additional_args
+    additional_args = json.loads(args.additional_args)
 
+    params_name = "_".join([str(additional_args[a]) for a in \
+                                ["ts", "min_temp", "temp_factor", "slice_threshold", "module_threshold", "sim_factor", "activity_baseline"]])
 
     # read files
     dataset_name=os.path.splitext(os.path.split(dataset_file)[1])[0]
-    output_folder=os.path.join(true_solutions_folder, "{}_{}".format(dataset_name,algo))
+    output_folder=os.path.join(true_solutions_folder, "{}_{}_{}".format(dataset_name,algo,params_name))
     try:
         os.makedirs(output_folder)
     except FileExistsError:
         pass
+    output_file = os.path.join(output_folder,"report.tsv")
 
-    pcs_data=pd.read_csv(constants.config_json["pcs_file"], sep='\t', index_col=0)
+    pcs_data=pd.read_csv(os.path.join(output_folder, "pcs.tsv"), sep='\t', index_col=0)
+    if pcs_data.shape[0]==0:
+        with open(output_file, 'w') as o:
+            o.write("\t".join(["RF accuracy","SVM accuracy","SVM AUPR","SVM AUROC","Null AUPR","Null AUROC"])+"\n")
+            o.write("\t".join(["0", "0", "0", "0", "0", "0"]))
+            return
+
     phenotype = pd.read_csv(constants.config_json["phenotype_file"], sep='\t')
 
     # parse data
     phenotype.index = phenotype.loc[:,constants.config_json["phenotype_index"]]
     phenotype=phenotype.loc[:,constants.config_json["phenotype_field"]]
-    phenotype_0=phenotype[phenotype.isin([constants.config_json["phenotype_values"][0]])].iloc[:194]
+    phenotype_0=phenotype[phenotype.isin([constants.config_json["phenotype_values"][0]])]
     phenotype_1 = phenotype[phenotype.isin([constants.config_json["phenotype_values"][1]])]
     phenotype=pd.concat([phenotype_0,phenotype_1], axis=0)
     for a in constants.config_json["phenotype_values"]:
@@ -109,6 +118,11 @@ def main():
     print(f'AUPR null (all labels are 1): {np.mean(pr_aucs_nulls)}')
     print(f'AUROC null (all labels are 1): {np.mean(roc_aucs_nulls)}')
 
+    with open(output_file, 'w') as o:
+        metrics = [prediction_accuracies_rf, prediction_accuracies_svm, pr_aucs, roc_aucs, pr_aucs_nulls,
+                   roc_aucs_nulls]
+        o.write("\t".join(["RF accuracy", "SVM accuracy", "SVM AUPR", "SVM AUROC", "Null AUPR", "Null AUROC"]) + "\n")
+        o.write("\t".join([str(round(np.mean(m), 4)) for m in metrics]))
 
 if __name__ == "__main__":
     main()

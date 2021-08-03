@@ -31,10 +31,16 @@ def main():
     network_file = args.network_file
     go_folder = args.go_folder
     true_solutions_folder = args.true_solutions_folder
-    additional_args = args.additional_args
+
+    additional_args = json.loads(args.additional_args)
+
+    params_name = "_".join([str(additional_args[a]) for a in \
+                            ["ts", "min_temp", "temp_factor", "slice_threshold", "module_threshold", "sim_factor",
+                             "activity_baseline"]])
 
     dataset_name=os.path.splitext(os.path.split(dataset_file)[1])[0]
-    output_folder=os.path.join(true_solutions_folder, "{}_{}".format(dataset_name,algo))
+    output_folder=os.path.join(true_solutions_folder, "{}_{}_{}".format(dataset_name,algo,params_name))
+    output_file=os.path.join(output_folder, "pcs.tsv")
     try:
         os.makedirs(output_folder)
     except FileExistsError:
@@ -55,7 +61,7 @@ def main():
 
 
     df_features = pd.DataFrame() # index=ge.index, columns=list(np.arange(n_components)))
-    path_to_modules=f'{constants.config_json["true_solutions_folder"]}/{os.path.splitext(os.path.basename(constants.config_json["dataset_file"]))[0]}_{constants.config_json["algo"]}/report/'
+    path_to_modules=os.path.join(output_folder,'modules')
     file_names = [f for f in os.listdir(path_to_modules) if os.path.isfile(os.path.join(path_to_modules, f))]
     # iterates over gene files
     for i, cur_file in enumerate(file_names):
@@ -67,7 +73,7 @@ def main():
 
             # concatenates PCs of different modules: a SINGLE PC per module
             df_features=pd.concat([df_features,pd.DataFrame(index=ge.index,data=calc_pca(ge.loc[:,module_genes].dropna(axis=1),n_components=n_components),columns=[cur_file_index])], axis=1)
-    df_features.to_csv(constants.config_json["pcs_file"], sep='\t')
+    df_features.to_csv(output_file, sep='\t')
 
 
 if __name__ == "__main__":
