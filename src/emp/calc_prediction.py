@@ -104,10 +104,10 @@ def main():
     # print averaged metrics
     print(f'RF accuracy: {np.mean(prediction_accuracies_rf)}')
     print(f'SVM accuracy: {np.mean(prediction_accuracies_svm)}')
-    print(f'RF average AUPR: {np.mean(pr_aucs)}')
+    print(f'SVM average AUPR: {np.mean(pr_aucs)}')
     print(f'SVM average AUROC: {np.mean(roc_aucs)}')
     print(f'AUPR null (all labels are 1): {np.mean(pr_aucs_nulls)}')
-    print(f'AUROC null (all labels are 0): {np.mean(roc_aucs_nulls)}')
+    print(f'AUROC null (all labels are 1): {np.mean(roc_aucs_nulls)}')
 
 
 if __name__ == "__main__":
