@@ -33,7 +33,7 @@ pip install -r  config/dependencies.txt
 ## Run Bnet
 
 Bnet consists of several steps. For a specific set of input parameters, these steps should be carried sequentially.  
-Each parameter can be specified as command line parameter (For example `python script.py --param1 value1 --param2 value2`). values of parameters which are not specified in the command line are taken from `config/conf.json`.      
+Each parameter can be specified as command line parameter (For example `python script.py --param1 value1 --param2 value2`). values of parameters which are not specified in the command line are taken from `config/conf.json`. Note that all scripts shoudl be executed from the src/emp folder.     
 
   
 1. `generate_solution.py`: Run the bnet_sa algorithm.  
