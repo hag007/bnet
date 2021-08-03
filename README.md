@@ -5,9 +5,9 @@
 
 
 - [Set your environment](#set-your-environment)
-- [Run EMP](#run-emp)
+- [Run Bnet](#run-bnet)
 - [Main output files](#main-output-files)
-- [EMP container](#emp-container)
+- [Bnet container](#bnet-container)
 
 ## Set your environment
 
@@ -22,17 +22,17 @@ cd bnet
 Bnet is written in Python 3.6. We recommend using a virtual environment. in Linux:
 ```
 python -m venv bnet-env
-source emp-env/bin/activate
+source bnet-env/bin/activate
 ```
 
-To install EMP dependencies type:
+To install Bnet dependencies type:
 ```
 pip install -r  config/dependencies.txt
 ```
 
-## Run EMP
+## Run Bnet
 
-EMP consists of 6 main steps. For a specific set of input parameters, these steps should be carried sequentially.  
+Bnet consists of several steps. For a specific set of input parameters, these steps should be carried sequentially.  
 Each parameter can be specified as command line parameter (For example `python script.py --param1 value1 --param2 value2`). values of parameters which are not specified in the command line are taken from `config/conf.json`.      
 
   
@@ -70,7 +70,7 @@ Parameters default values are defined at `config/conf.json`
 
 TBD
 
-## EMP container
+## Bnet container
 Bnet is also available as ready-to-use tool in a container.
 Using TAU-VPN and gdocker, type `gdocker gaga-import --image_name=bnet`
 
