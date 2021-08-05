@@ -43,7 +43,8 @@ def main():
 
     # read files
     dataset_name=os.path.splitext(os.path.split(dataset_file)[1])[0]
-    output_folder=os.path.join(true_solutions_folder, "{}_{}_{}".format(dataset_name,algo,params_name))
+    unique_folder_name="{}_{}_{}".format(dataset_name,algo,params_name)
+    output_folder=os.path.join(true_solutions_folder, unique_folder_name)
     try:
         os.makedirs(output_folder)
     except FileExistsError:
@@ -53,8 +54,8 @@ def main():
     pcs_data=pd.read_csv(os.path.join(output_folder, "pcs.tsv"), sep='\t', index_col=0)
     if pcs_data.shape[0]==0:
         with open(output_file, 'w') as o:
-            o.write("\t".join(["RF accuracy","SVM accuracy","SVM AUPR","SVM AUROC","Null AUPR","Null AUROC"])+"\n")
-            o.write("\t".join(["0", "0", "0", "0", "0", "0"]))
+            o.write("\t".join(["name", "RF accuracy","SVM accuracy","SVM AUPR","SVM AUROC","Null AUPR","Null AUROC"])+"\n")
+            o.write("\t".join([unique_folder_name, "0", "0", "0", "0", "0", "0"]))
             return
 
     phenotype = pd.read_csv(constants.config_json["phenotype_file"], sep='\t')
@@ -122,7 +123,7 @@ def main():
         metrics = [prediction_accuracies_rf, prediction_accuracies_svm, pr_aucs, roc_aucs, pr_aucs_nulls,
                    roc_aucs_nulls]
         o.write("\t".join(["name", "RF accuracy", "SVM accuracy", "SVM AUPR", "SVM AUROC", "Null AUPR", "Null AUROC"]) + "\n")
-        o.write("\t".join([os.path.basename(output_file)] + [str(round(np.mean(m), 4)) for m in metrics]))
+        o.write("\t".join([unique_folder_name] + [str(round(np.mean(m), 4)) for m in metrics]))
 
 if __name__ == "__main__":
     main()
