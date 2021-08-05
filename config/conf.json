@@ -21,7 +21,7 @@
   "permuted_datasets_folder" : "../../data/emp_test/permuted_datasets",
   "permuted_solutions_folder" : "../../data/emp_test/permuted_solutions",
   "true_solutions_folder" : "/home/gaga/hagailevi/omics/output/true_solutions",
-  "metric_folder" : "/home/gaga/hagailevi/omics/output/metrics",
+  "metrics_folder" : "/home/gaga/hagailevi/omics/output/metrics",
   "n_start" : "0",
   "n_end" : "1010",
   "pf" : "3",

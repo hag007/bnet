@@ -121,8 +121,8 @@ def main():
     with open(output_file, 'w') as o:
         metrics = [prediction_accuracies_rf, prediction_accuracies_svm, pr_aucs, roc_aucs, pr_aucs_nulls,
                    roc_aucs_nulls]
-        o.write("\t".join(["RF accuracy", "SVM accuracy", "SVM AUPR", "SVM AUROC", "Null AUPR", "Null AUROC"]) + "\n")
-        o.write("\t".join([str(round(np.mean(m), 4)) for m in metrics]))
+        o.write("\t".join(["name", "RF accuracy", "SVM accuracy", "SVM AUPR", "SVM AUROC", "Null AUPR", "Null AUROC"]) + "\n")
+        o.write("\t".join([os.path.basename(output_file)] + [str(round(np.mean(m), 4)) for m in metrics]))
 
 if __name__ == "__main__":
     main()

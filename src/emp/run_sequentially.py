@@ -60,7 +60,6 @@ def main():
     network_file=args.network_file
     go_folder=args.go_folder
     true_solutions_folder=args.true_solutions_folder
-    report_folder=args.report_folder
     pf=args.pf
     additional_args = args.additional_args
     tuning_comb_args = args.tuning_comb
@@ -69,7 +68,6 @@ def main():
 
     algo_param="--algo {}".format(algo)
     true_solutions_folder_param = "--true_solutions_folder {}".format(true_solutions_folder)
-    report_folder_param = "--report_folder {}".format(report_folder)
     network_file_param = "--network_file {}".format(network_file)
     go_folder_param = "--go_folder {}".format(go_folder)
     pf_param = "--pf {}".format(pf)
