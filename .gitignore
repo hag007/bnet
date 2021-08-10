@@ -8,4 +8,4 @@
 /src/sh/*.sh
 *.swp
 /emp-env
-
+/bnet-env
