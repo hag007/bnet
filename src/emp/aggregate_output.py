@@ -49,8 +49,11 @@ def main():
     for dataset_file in dataset_files:
         dataset_name = os.path.splitext(os.path.split(dataset_file)[1])[0]
         combs_str += "_" + dataset_name
-        for comb in combs:
-            params.append([dataset_name, algo, true_solutions_folder, comb, tuning_comb])
+        for network_file in network_files:
+            network_name = os.path.splitext(os.path.split(network_file)[1])[0]
+            combs_str += "_" + network_name
+            for comb in combs:
+                params.append([dataset_name, network_name, algo, true_solutions_folder, comb, tuning_comb])
 
     combs_str += "_" + "_".join([str(tuning_comb[a]) for a in \
                                                                 ["ts", "min_temp", "temp_factor", "slice_threshold",
@@ -69,13 +72,13 @@ def main():
 
 
 def fetch_metrics(args):
-    dataset_name, algo, true_solutions_folder, comb, tuning_comb = args
+    dataset_name, network_name, algo, true_solutions_folder, comb, tuning_comb = args
     tuning_args = {k: v for k, v in zip(tuning_comb.keys(), comb)}
     params_name = "_".join([str(tuning_args[a]) for a in \
                             ["ts", "min_temp", "temp_factor", "slice_threshold", "module_threshold", "sim_factor",
                              "activity_baseline"]])
 
-    result_folder = os.path.join(true_solutions_folder, "{}_{}_{}".format(dataset_name, algo, params_name))
+    result_folder = os.path.join(true_solutions_folder, "{}_{}_{}_{}".format(dataset_name, network_name, algo, params_name))
     report_file = os.path.join(result_folder, "report.tsv")
     df = pd.read_csv(report_file,index_col=0)
     return df

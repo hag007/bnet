@@ -29,6 +29,8 @@ def main():
     parser.add_argument('--go_folder', dest='go_folder', default=constants.config_json["go_folder"])
     parser.add_argument('--true_solutions_folder', dest='true_solutions_folder', default=constants.config_json["true_solutions_folder"])
     parser.add_argument('--additional_args', help="additional_args", dest='additional_args', default=constants.config_json["additional_args"])
+    parser.add_argument('--phenotype_args', help="phenotype_args", dest='phenotype_args',
+                        default=constants.config_json["phenotype_args"])
     args = parser.parse_args()
 
     dataset_file=args.dataset_file
@@ -37,13 +39,15 @@ def main():
     go_folder = args.go_folder
     true_solutions_folder = args.true_solutions_folder
     additional_args = json.loads(args.additional_args)
+    phenotype_args = json.loads(args.phenotype_args)
 
     params_name = "_".join([str(additional_args[a]) for a in \
                                 ["ts", "min_temp", "temp_factor", "slice_threshold", "module_threshold", "sim_factor", "activity_baseline"]])
 
     # read files
     dataset_name=os.path.splitext(os.path.split(dataset_file)[1])[0]
-    unique_folder_name="{}_{}_{}".format(dataset_name,algo,params_name)
+    network_name=os.path.splitext(os.path.split(network_file)[1])[0]
+    unique_folder_name="{}_{}_{}_{}".format(dataset_name,network_name,algo,params_name)
     output_folder=os.path.join(true_solutions_folder, unique_folder_name)
     try:
         os.makedirs(output_folder)
@@ -58,16 +62,16 @@ def main():
             o.write("\t".join([unique_folder_name, "0", "0", "0", "0", "0", "0"]))
             return
 
-    phenotype = pd.read_csv(constants.config_json["phenotype_file"], sep='\t')
+    phenotype = pd.read_csv(phenotype_args["path to TCGA file"], sep='\t')
 
     # parse data
     phenotype.index = phenotype.loc[:,constants.config_json["phenotype_index"]]
-    phenotype=phenotype.loc[:,constants.config_json["phenotype_field"]]
-    phenotype_0=phenotype[phenotype.isin([constants.config_json["phenotype_values"][0]])]
-    phenotype_1 = phenotype[phenotype.isin([constants.config_json["phenotype_values"][1]])]
+    phenotype=phenotype_args["name of variable"]
+    phenotype_0=phenotype[phenotype.isin(phenotype_args["value1"])]
+    phenotype_1 = phenotype[phenotype.isin(phenotype_args["value2"])]
     phenotype=pd.concat([phenotype_0,phenotype_1], axis=0)
-    for a in constants.config_json["phenotype_values"]:
-        print(f'# of phenotype {a}: {(phenotype==a).sum()}')
+    for a in [phenotype_args["value1"],phenotype_args["value2"]]:
+        print(f'# of phenotype {a}: {(phenotype.isin(a)).sum()}')
     phenotype=phenotype.reindex(pcs_data.index).dropna(axis=0)
     pcs_data = pcs_data.reindex(phenotype.index).dropna(axis=0)
 
@@ -83,7 +87,7 @@ def main():
     n_iterations=100
     for a in np.arange(n_iterations):
         # run RF
-        X_train, X_test, y_train, y_test = train_test_split(pcs_data, [(constants.config_json["phenotype_values"].index(a)-1)*(-1) for a in phenotype], test_size = 0.33)
+        X_train, X_test, y_train, y_test = train_test_split(pcs_data, [([phenotype_args["value1"],phenotype_args["value2"]].index(a)-1)*(-1) for a in phenotype], test_size = 0.33)
         clf = RandomForestClassifier(max_depth=2, random_state=0)
         clf.fit(X_train, y_train)
         y_pred=clf.predict(X_test)

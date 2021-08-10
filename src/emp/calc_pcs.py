@@ -39,7 +39,8 @@ def main():
                              "activity_baseline"]])
 
     dataset_name=os.path.splitext(os.path.split(dataset_file)[1])[0]
-    output_folder=os.path.join(true_solutions_folder, "{}_{}_{}".format(dataset_name,algo,params_name))
+    network_name = os.path.splitext(os.path.split(network_file)[1])[0]
+    output_folder=os.path.join(true_solutions_folder, "{}_{}_{}_{}".format(dataset_name,network_name,algo,params_name))
     output_file=os.path.join(output_folder, "pcs.tsv")
     try:
         os.makedirs(output_folder)
