@@ -5,7 +5,7 @@ import os
 import pandas as pd
 
 from src import constants
-from src.implementations.domino import main as domino_main
+from src.implementations.bnet_dynamic import main as domino_main
 from src.utils.ensembl2entrez import ensembl2entrez_convertor
 from src.utils.network import get_network_genes
 

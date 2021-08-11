@@ -177,7 +177,7 @@ def modify_subslice(cur_subslice, cur_slice, t):
 
 def get_edge_weight(edge):
 
-    return  np.abs(G_modularity.get_edge_data(edge[0],edge[1])["score"])
+    return  G_modularity.get_edge_data(edge[0],edge[1])["score"]/1000.0
 
 def add_to_subslice(cur_subslice, cur_slice, t):
     cur_slice_minus_cur_subslice=cur_slice.copy()

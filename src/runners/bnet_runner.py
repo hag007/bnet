@@ -5,14 +5,14 @@ import os
 import pandas as pd
 
 from src import constants
-from src.implementations.bnet_static_corr import main as domino_main
+from src.implementations.bnet_dynamic import main as domino_main
 from src.utils.ensembl2entrez import ensembl2entrez_convertor
 from src.utils.network import get_network_genes
 
 from src.runners.abstract_runner import AbstractRunner
-class DominoStaticStringRunner(AbstractRunner):
+class BnetRunner(AbstractRunner):
     def __init__(self):
-        super().__init__("DOMINO_STATIC_STRING")
+        super().__init__("BNET")
 
 
     def extract_modules_and_bg(self, bg_genes, dest_algo_dir):
@@ -54,7 +54,6 @@ class DominoStaticStringRunner(AbstractRunner):
         module_threshold = 0.05
         if 'module_threshold' in kwargs:
             module_threshold = kwargs['module_threshold']
-
         active_genes_file, bg_genes = self.init_params(dataset_file_name, network_file_name, output_folder)
         print(f'domino_parameters: active_genes_file={active_genes_file}, network_file={network_file_name},slices_file={slices_file}, slice_threshold={slice_threshold},module_threshold={module_threshold}')
         modules = domino_main(active_genes_file=dataset_file_name, network_file=network_file_name,
@@ -63,13 +62,5 @@ class DominoStaticStringRunner(AbstractRunner):
         modules = list(filter(lambda x: len(x) > 3, modules))
         all_bg_genes = [bg_genes for x in modules]
         return modules, all_bg_genes
-
-
-if __name__ == "__main__":
-    constants.N_OF_THREADS=1
-    constants.USE_CACHE=False
-    runner=DominoRunner()
-    runner.main(dataset_file_name=os.path.join(constants.config_json["base_dir"],"original_datasets/brca1.tsv"), network_file_name=os.path.join(constants.config_json["base_dir"],"networks/dip.sif"), go_folder=os.path.join(constants.config_json["base_dir"],"go"), output_folder=os.path.join(constants.config_json["base_dir"],"true_solutions/brca1_{}".format(runner.ALGO_NAME)), slices_file=os.path.join(constants.config_json["base_dir"],"networks/dip_louvain_slices.txt"), module_threshold=0.05, slice_threshold=0.3)
-
 
 
