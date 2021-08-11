@@ -24,18 +24,17 @@ from src.implementations.preprocess_slices import read_preprocessed_slices
 from src.implementations.network_builder import build_network
 
 from src.utils.go_similarity import calc_similarity_pairs
+
 import src.constants as constants
 
 G_modularity = None
 
-ACTIVITY_BASELINE=0 # 0.2
-SIMILARITY_FACTOR=2.5 # 0.2
-def extract_scores(scores_file):
+def extract_scores(scores_file,qval_norm=1.3):
     """"""
     scores = pd.read_csv(scores_file, sep='\t', index_col=0)
     if "qval" in scores.columns:
 
-        scores["score"] = -np.log10(scores["qval"])/1.3
+        scores["score"] = -np.log10(scores["qval"])/qval_norm
     else:
         scores = pd.read_csv(scores_file, sep='\t', index_col=0, header=None, dtype=str)
         scores["score"] = 1
@@ -115,10 +114,10 @@ def get_seeds(slice, threhold):
 
 
 def sa_for_slice(params):
-    G, slice, i_slice, ts, relevant_slices, prize_factor, module_threshold = params
+    G, slice, i_slice, ts, min_temp, temp_factor, relevant_slices, module_threshold, min_n_genes, sim_factor, activity_baseline = params
     score_sum=sum([G.nodes[a]["score"] for a in slice.nodes])
     subslices = [(G.subgraph(a), G.nodes[a]["score"]/score_sum) for a in slice.nodes]
-    for t in np.arange(ts+10, 10,-1):
+    for t in np.arange(ts+min_temp, min_temp,-1):
         random.shuffle(subslices)
         rand_num = np.random.uniform(0, 1, 1)
         prob_agg=0
@@ -126,11 +125,11 @@ def sa_for_slice(params):
             prob_agg+=subslice[1]
             # print(f'cur prob: {prob_agg}')
             if prob_agg >= rand_num:
-                updated_subslice_subgraph = modify_subslice(subslices[subslice_index][0], slice, t/40.0)
+                updated_subslice_subgraph = modify_subslice(subslices[subslice_index][0], slice, t/temp_factor,min_n_genes,sim_factor,activity_baseline)
                 break
         subslices=update_subslice_probabilities([a[0] for a in subslices], updated_subslice_subgraph, subslice_index, score_sum)
-        # print("current iteration:")
-        # print((sum([len(a[0].nodes) for a in subslices]),[len(a[0].nodes) for a in subslices]))
+        print("current iteration:")
+        print((sum([len(a[0].nodes) for a in subslices]),[len(a[0].nodes) for a in subslices]))
 
     if sum([len([b for a in subslices for b in a[0].nodes  if slice.nodes[b]["pertubed_node"]])]) > len([a for a in slice if slice.nodes[a]["pertubed_node"]]):
         x=1
@@ -166,18 +165,18 @@ def update_subslice_probabilities(subslices, new_subslice, modified_subslice_ind
 
 
 
-def modify_subslice(cur_subslice, cur_slice, t):
+def modify_subslice(cur_subslice, cur_slice, t,min_n_genes=4,sim_factor=2.5,activity_baseline=0):
     step = np.random.binomial(1, 0.5)
     modified_slice = None
-    if (step or len(cur_subslice.nodes) < 4) and len(cur_subslice.nodes) < len(cur_slice.nodes) :
-        modified_slice = add_to_subslice(cur_subslice, cur_slice, t)
+    if (step or len(cur_subslice.nodes) < min_n_genes) and len(cur_subslice.nodes) < len(cur_slice.nodes) :
+        modified_slice = add_to_subslice(cur_subslice, cur_slice, t, sim_factor, activity_baseline)
     else:
-        modified_slice = remove_from_subslice(cur_subslice, t)
+        modified_slice = remove_from_subslice(cur_subslice, t, sim_factor, activity_baseline)
 
     return modified_slice
 
 
-def add_to_subslice(cur_subslice, cur_slice, t):
+def add_to_subslice(cur_subslice, cur_slice, t, sim_factor,activity_baseline):
     cur_slice_minus_cur_subslice=cur_slice.copy()
     cur_slice_minus_cur_subslice.remove_nodes_from(cur_subslice.nodes)
     cross_edges = list(edge_boundary(cur_slice, cur_subslice, cur_slice_minus_cur_subslice))
@@ -185,7 +184,7 @@ def add_to_subslice(cur_subslice, cur_slice, t):
     node_outside_sublice = edge_to_add[0] if edge_to_add[0] not in cur_subslice.nodes else edge_to_add[1]
     if len([a for a in cur_subslice.nodes if cur_slice.nodes[a]["pertubed_node"]]) ==0:
         x=1
-    delta_c = -np.mean(calc_similarity_pairs([a for a in cur_subslice.nodes], [node_outside_sublice])) * SIMILARITY_FACTOR + ACTIVITY_BASELINE + \
+    delta_c = -np.mean(calc_similarity_pairs([a for a in cur_subslice.nodes], [node_outside_sublice])) * sim_factor + activity_baseline + \
               float(cur_slice.nodes[node_outside_sublice]['score'])
     # print(f"delta_c addition: {delta_c}")
     p = None
@@ -206,7 +205,7 @@ def add_to_subslice(cur_subslice, cur_slice, t):
         return cur_subslice.copy()
 
 
-def remove_from_subslice(cur_subslice, t):
+def remove_from_subslice(cur_subslice, t,sim_factor,activity_baseline):
     n_pertubed_nodes=len([a for a in cur_subslice if cur_subslice.nodes[a]["pertubed_node"]])
     leafs = [a for a in cur_subslice if cur_subslice.degree(a) <= 1 and (n_pertubed_nodes>1 or not cur_subslice.nodes[a]["pertubed_node"])]
     if len(leafs)==0:
@@ -214,7 +213,7 @@ def remove_from_subslice(cur_subslice, t):
     leaf_to_remove = random.choice(leafs)
     subslice_minus_node=cur_subslice.copy()
     subslice_minus_node.remove_node(leaf_to_remove)
-    delta_c = np.mean(calc_similarity_pairs([leaf_to_remove], [a for a in subslice_minus_node.nodes])) * SIMILARITY_FACTOR - ACTIVITY_BASELINE - \
+    delta_c = np.mean(calc_similarity_pairs([leaf_to_remove], [a for a in subslice_minus_node.nodes])) * sim_factor - activity_baseline - \
               cur_subslice.nodes[leaf_to_remove]['score']
     # print(f"delta_c removal: {delta_c}")
     p = None
@@ -317,8 +316,8 @@ def get_final_modules(G, G_putative_modules):
     return sorted([a[0] for a, b in zip(module_sigs, fdr_bh_results[0]) if b],key=lambda a: -len(a))[:4]
 
 
-def main(active_genes_file, network_file, slices_file=None, slice_threshold=0.3, module_threshold=0.05, prize_factor=0,
-         ts=100):
+def main(active_genes_file, network_file, slices_file=None, slice_threshold=0.3, module_threshold=0.05,
+         ts=100, min_temp=10, temp_factor=40.0, qval_norm=1.3, min_n_genes=4, sim_factor=2.5, activity_baseline=0):
     print("start running DOMINO...")
     if os.path.exists(f'{network_file}.pkl') and constants.USE_CACHE:
         G = pickle.load(open(f'{network_file}.pkl', 'rb'))
@@ -334,7 +333,7 @@ def main(active_genes_file, network_file, slices_file=None, slice_threshold=0.3,
     G.remove_nodes_from(list(nx.isolates(G)))
 
     print("done building network")
-    scores = extract_scores(active_genes_file)
+    scores = extract_scores(active_genes_file,qval_norm)
     G = add_scores_to_nodes(G, scores)
 
     modularity_connected_components = read_preprocessed_slices(slices_file)
@@ -349,7 +348,7 @@ def main(active_genes_file, network_file, slices_file=None, slice_threshold=0.3,
     print(f'{len(relevant_slices)} relevant slices were retained with threshold {slice_threshold}')
     params = []
     for i_slice, slice in enumerate(relevant_slices):
-        params.append([G, G.subgraph(slice), i_slice, ts, relevant_slices, prize_factor, module_threshold])
+        params.append([G, G.subgraph(slice), i_slice, ts, min_temp, temp_factor, relevant_slices, module_threshold, min_n_genes, sim_factor, activity_baseline])
     p = multiprocessing.Pool(constants.N_OF_THREADS)
     putative_modules = reduce(lambda a, b: a + b, p.map(sa_for_slice, params), [])
     p.close()
@@ -359,9 +358,3 @@ def main(active_genes_file, network_file, slices_file=None, slice_threshold=0.3,
     return final_modules
 
 
-if __name__=="__main__":
-    ms=main('/home/gaga/hagailevi/omics/input/active_gene_test.txt', '/home/gaga/hagailevi/omics/input/dip.sif', slices_file='/home/gaga/hagailevi/omics/input/dip_slices.sif.pkl', slice_threshold=0.3, module_threshold=0.05,
-             prize_factor=0,
-             ts=100)
-    print("=================")
-    print([m.nodes for m in ms])
