@@ -66,7 +66,8 @@ def main():
 
     # parse data
     phenotype.index = phenotype.loc[:,constants.config_json["phenotype_index"]]
-    phenotype=phenotype_args["name of variable"]
+    phenotype_field = phenotype_args["name of variable"]
+    phenotype=phenotype.loc[:,phenotype_field]
     phenotype_0=phenotype[phenotype.isin(phenotype_args["value1"])]
     phenotype_1 = phenotype[phenotype.isin(phenotype_args["value2"])]
     phenotype=pd.concat([phenotype_0,phenotype_1], axis=0)
@@ -87,7 +88,9 @@ def main():
     n_iterations=100
     for a in np.arange(n_iterations):
         # run RF
-        X_train, X_test, y_train, y_test = train_test_split(pcs_data, [([phenotype_args["value1"],phenotype_args["value2"]].index(a)-1)*(-1) for a in phenotype], test_size = 0.33)
+        # print(pcs_data)
+        labels=[([a in phenotype_args["value1"], a in phenotype_args["value2"]].index(True)) for a in phenotype]
+        X_train, X_test, y_train, y_test = train_test_split(pcs_data, labels, test_size = 0.33)
         clf = RandomForestClassifier(max_depth=2, random_state=0)
         clf.fit(X_train, y_train)
         y_pred=clf.predict(X_test)
@@ -118,16 +121,15 @@ def main():
     # print averaged metrics
     print(f'RF accuracy: {np.mean(prediction_accuracies_rf)}')
     print(f'SVM accuracy: {np.mean(prediction_accuracies_svm)}')
-    print(f'SVM average AUPR: {np.mean(pr_aucs)}')
-    print(f'SVM average AUROC: {np.mean(roc_aucs)}')
-    print(f'AUPR null (all labels are 1): {np.mean(pr_aucs_nulls)}')
-    print(f'AUROC null (all labels are 1): {np.mean(roc_aucs_nulls)}')
+    print(f'SVM average AUPR: {np.mean(pr_aucs)} (AUPR null (all labels are 1): {np.mean(pr_aucs_nulls)})')
+    print(f'SVM average AUROC: {np.mean(roc_aucs)} (null score (all labels are 1) is : {np.mean(roc_aucs_nulls)})')
+
 
     with open(output_file, 'w') as o:
         metrics = [prediction_accuracies_rf, prediction_accuracies_svm, pr_aucs, roc_aucs, pr_aucs_nulls,
                    roc_aucs_nulls]
-        o.write("\t".join(["name", "RF accuracy", "SVM accuracy", "SVM AUPR", "SVM AUROC", "Null AUPR", "Null AUROC"]) + "\n")
-        o.write("\t".join([unique_folder_name] + [str(round(np.mean(m), 4)) for m in metrics]))
+        o.write("\t".join(["name", "N features", "RF accuracy", "SVM accuracy", "SVM AUPR", "SVM AUROC", "Null AUPR", "Null AUROC"]) + "\n")
+        o.write("\t".join([unique_folder_name, str(pcs_data.shape[1])] + [str(round(np.mean(m), 4)) for m in metrics]))
 
 if __name__ == "__main__":
     main()
