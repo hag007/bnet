@@ -1,8 +1,9 @@
 {
-  "gene_expression_file" : "../../../omics/GDC-TCGA/SKCM/tcga_data/TCGA-SKCM.htseq_fpkm.tsv",
-  "phenotype_file": "../../../omics/GDC-TCGA/SKCM/tcga_data/clinicalMatrix",
-  "dataset_file" : "../../../omics/input/bnet_skcm_location.tsv",
-  "gene_id_file": "../../../omics/list/protein_coding.txt",
+  "gene_expression_file" : "/specific/netapp5/gaga/hagailevi/omics/GDC-TCGA/BRCA/tcga_data/TCGA-BRCA.htseq_fpkm.tsv",
+  "phenotype_file": "/specific/netapp5/gaga/hagailevi/omics/GDC-TCGA/BRCA/tcga_data/clinicalMatrix",
+  "dataset_file" : "/specific/netapp5/gaga/hagailevi/omics/input/active_nodes.txt",
+
+  "gene_id_file": "/specific/netapp5/gaga/hagailevi/omics/list/protein_coding.txt",
   "phenotype_index": "submitter_id.samples",
   "phenotype_field": "PAM50Call_RNAseq",
   "phenotype_values": ["LumA", "LumB"],

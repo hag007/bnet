@@ -102,12 +102,12 @@ def main():
             y_test))  # roc_auc_score(labels_test, probabilities))
 
     # print averaged metrics
-    print(np.mean(prediction_accuracies_rf))
-    print(np.mean(prediction_accuracies_svm))
-    print(np.mean(pr_aucs))
-    print(np.mean(roc_aucs))
-    print(np.mean(pr_aucs_nulls))
-    print(np.mean(roc_aucs_nulls))
+    print(f'RF accuracy: {np.mean(prediction_accuracies_rf)}')
+    print(f'SVM accuracy: {np.mean(prediction_accuracies_svm)}')
+    print(f'SVM average AUPR: {np.mean(pr_aucs)}')
+    print(f'SVM average AUROC: {np.mean(roc_aucs)}')
+    print(f'AUPR null (all labels are 1): {np.mean(pr_aucs_nulls)}')
+    print(f'AUROC null (all labels are 1): {np.mean(roc_aucs_nulls)}')
 
 
 if __name__ == "__main__":
