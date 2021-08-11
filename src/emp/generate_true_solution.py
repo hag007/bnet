@@ -26,7 +26,7 @@ def main():
     true_solutions_folder = args.true_solutions_folder
     additional_args = args.additional_args
 
-    init_state(go_folder)
+    # init_state(go_folder)
 
     dataset_name=os.path.splitext(os.path.split(dataset_file)[1])[0]
     output_folder=os.path.join(true_solutions_folder, "{}_{}".format(dataset_name,algo))

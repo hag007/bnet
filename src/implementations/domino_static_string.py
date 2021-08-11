@@ -21,9 +21,8 @@ from networkx.algorithms.components import connected_components
 
 from src.utils.graph_influence_linear_th import linear_threshold
 from src.implementations.preprocess_slices import read_preprocessed_slices
-from src.implementations.network_builder import build_network
+from src.implementations.network_builder import build_network_static
 
-from src.utils.go_similarity import calc_similarity_pairs
 import src.constants as constants
 
 G_modularity = None
@@ -176,6 +175,9 @@ def modify_subslice(cur_subslice, cur_slice, t):
 
     return modified_slice
 
+def get_edge_weight(edge):
+
+    return  0 # G_modularity.get_edge_data(edge[0],edge[1])["score"]/4+0.25
 
 def add_to_subslice(cur_subslice, cur_slice, t):
     cur_slice_minus_cur_subslice=cur_slice.copy()
@@ -183,9 +185,9 @@ def add_to_subslice(cur_subslice, cur_slice, t):
     cross_edges = list(edge_boundary(cur_slice, cur_subslice, cur_slice_minus_cur_subslice))
     edge_to_add = random.choice(cross_edges)
     node_outside_sublice = edge_to_add[0] if edge_to_add[0] not in cur_subslice.nodes else edge_to_add[1]
-    if len([a for a in cur_subslice.nodes if cur_slice.nodes[a]["pertubed_node"]]) ==0:
-        x=1
-    delta_c = -np.mean(calc_similarity_pairs([a for a in cur_subslice.nodes], [node_outside_sublice])) * SIMILARITY_FACTOR + ACTIVITY_BASELINE + \
+    # if len([a for a in cur_subslice.nodes if cur_slice.nodes[a]["pertubed_node"]]) ==0:
+    #     x=1
+    delta_c = -np.mean(get_edge_weight(edge_to_add)) * SIMILARITY_FACTOR + ACTIVITY_BASELINE + \
               float(cur_slice.nodes[node_outside_sublice]['score'])
     # print(f"delta_c addition: {delta_c}")
     p = None
@@ -212,9 +214,10 @@ def remove_from_subslice(cur_subslice, t):
     if len(leafs)==0:
         return cur_subslice.copy()
     leaf_to_remove = random.choice(leafs)
-    subslice_minus_node=cur_subslice.copy()
-    subslice_minus_node.remove_node(leaf_to_remove)
-    delta_c = np.mean(calc_similarity_pairs([leaf_to_remove], [a for a in subslice_minus_node.nodes])) * SIMILARITY_FACTOR - ACTIVITY_BASELINE - \
+    print(cur_subslice.edges(leaf_to_remove))
+    edge_to_remove=list(cur_subslice.edges(leaf_to_remove))[0]
+    print(edge_to_remove)
+    delta_c = np.mean(get_edge_weight(edge_to_remove)) * SIMILARITY_FACTOR - ACTIVITY_BASELINE - \
               cur_subslice.nodes[leaf_to_remove]['score']
     # print(f"delta_c removal: {delta_c}")
     p = None
@@ -294,7 +297,7 @@ def pf_filter(params):
 def get_final_modules(G, G_putative_modules):
     module_sigs = []
     G_putative_modules=[a for a in G_putative_modules if len(a.nodes) > 4 and len([n for n in a.nodes if G.nodes[n]["pertubed_node"]])>0]
-    print(len(G_putative_modules))
+    print(f"n of putative after filtering by size: {len(G_putative_modules)}")
     for i_cur_module, cur_G_module in enumerate(G_putative_modules):
         pertubed_nodes_in_cc = [cur_node for cur_node in cur_G_module.nodes if G.nodes[cur_node]["pertubed_node"]]
         pertubed_nodes = [cur_node for cur_node in G.nodes if G.nodes[cur_node]["pertubed_node"]]
@@ -325,7 +328,7 @@ def main(active_genes_file, network_file, slices_file=None, slice_threshold=0.3,
         print(f'network\' pkl is loaded: {network_file}.pkl')
     else:
         print(f'generating graph from {network_file}')
-        G = build_network(network_file)
+        G = build_network_static(network_file)
         pickle.dump(G, open(f'{network_file}.pkl', 'wb+'))
         print(f'network\' pkl is saved: {network_file}.pkl')
 

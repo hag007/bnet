@@ -3,6 +3,8 @@ sys.path.insert(0, '../')
 import os
 from src import constants
 from src.runners.domino_runner import DominoRunner
+from src.runners.domino_static_string_runner import DominoStaticStringRunner
+from src.runners.domino_static_corr_runner import DominoStaticCorrRunner
 from src.runners.netbox_runner import NetboxRunner
 from src.runners.jactivemodules_greedy_runner import jAMGreedyRunner
 from src.runners.jactivemodules_sa_runner import jAMSARunner
@@ -13,7 +15,7 @@ from src.runners.hotnet2_runner import Hotnet2Runner
 ALGO_BY_NAMES = {"netbox": NetboxRunner(), "jactivemodules_greedy": jAMGreedyRunner(),
                  "jactivemodules_greedy_string": jAMGreedyRunner(), "jactivemodules_sa": jAMSARunner(),
                  "bionet": BionetRunner(), "bionet_string": BionetRunner(), 'keypathwayminer_INES_GREEDY': KPMRunner(),
-                 'hotnet2': Hotnet2Runner(), 'DOMINO': DominoRunner()}
+                 'hotnet2': Hotnet2Runner(), 'DOMINO': DominoRunner(), 'DOMINO_STATIC_STRING': DominoStaticStringRunner(), 'DOMINO_STATIC_CORR': DominoStaticCorrRunner()}
 
 
 def add_algo_runner(k,v):
