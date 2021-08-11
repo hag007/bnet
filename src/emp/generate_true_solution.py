@@ -1,14 +1,15 @@
+import os
 import sys
 sys.path.insert(0, '../..')
 import json
 import argparse
-import os
 from src.runners.run_algo import run_algo
 import src.constants as constants
 from src.utils.go import init_state
 
 
 def main():
+
 
     parser = argparse.ArgumentParser(description='args')
     parser.add_argument('--dataset_file', dest='dataset_file', help='/path/to/dataset_file', default=constants.config_json["dataset_file"])
@@ -28,15 +29,8 @@ def main():
 
     # init_state(go_folder)
 
-    additional_args_json = json.loads(args.additional_args)
-
-    params_name = "_".join([str(additional_args_json[a]) for a in \
-                                ["ts", "min_temp", "temp_factor", "slice_threshold", "module_threshold", "sim_factor", "activity_baseline"]])
-    # read files
     dataset_name=os.path.splitext(os.path.split(dataset_file)[1])[0]
-    network_name=os.path.splitext(os.path.split(network_file)[1])[0]
-    output_folder=os.path.join(true_solutions_folder, "{}_{}_{}_{}".format(dataset_name,network_name,algo,params_name))
-
+    output_folder=os.path.join(true_solutions_folder, "{}_{}".format(dataset_name,algo))
     try:
         os.makedirs(output_folder)
     except FileExistsError:

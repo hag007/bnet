@@ -29,6 +29,8 @@ def main():
     parser.add_argument('--go_folder', dest='go_folder', default=constants.config_json["go_folder"])
     parser.add_argument('--true_solutions_folder', dest='true_solutions_folder', default=constants.config_json["true_solutions_folder"])
     parser.add_argument('--additional_args', help="additional_args", dest='additional_args', default=constants.config_json["additional_args"])
+    parser.add_argument('--phenotype_args', help="phenotype_args", dest='phenotype_args',
+                        default=constants.config_json["phenotype_args"])
     args = parser.parse_args()
 
     dataset_file=args.dataset_file
@@ -36,28 +38,41 @@ def main():
     network_file = args.network_file
     go_folder = args.go_folder
     true_solutions_folder = args.true_solutions_folder
-    additional_args = args.additional_args
+    additional_args = json.loads(args.additional_args)
+    phenotype_args = json.loads(args.phenotype_args)
 
+    params_name = "_".join([str(additional_args[a]) for a in \
+                                ["ts", "min_temp", "temp_factor", "slice_threshold", "module_threshold", "sim_factor", "activity_baseline"]])
 
     # read files
     dataset_name=os.path.splitext(os.path.split(dataset_file)[1])[0]
-    output_folder=os.path.join(true_solutions_folder, "{}_{}".format(dataset_name,algo))
+    network_name=os.path.splitext(os.path.split(network_file)[1])[0]
+    unique_folder_name="{}_{}_{}_{}".format(dataset_name,network_name,algo,params_name)
+    output_folder=os.path.join(true_solutions_folder, unique_folder_name)
     try:
         os.makedirs(output_folder)
     except FileExistsError:
         pass
+    output_file = os.path.join(output_folder,"report.tsv")
 
-    pcs_data=pd.read_csv(constants.config_json["pcs_file"], sep='\t', index_col=0)
-    phenotype = pd.read_csv(constants.config_json["phenotype_file"], sep='\t')
+    pcs_data=pd.read_csv(os.path.join(output_folder, "pcs.tsv"), sep='\t', index_col=0)
+    if pcs_data.shape[0]==0:
+        with open(output_file, 'w') as o:
+            o.write("\t".join(["name", "RF accuracy","SVM accuracy","SVM AUPR","SVM AUROC","Null AUPR","Null AUROC"])+"\n")
+            o.write("\t".join([unique_folder_name, "0", "0", "0", "0", "0", "0"]))
+            return
+
+    phenotype = pd.read_csv(phenotype_args["path to TCGA file"], sep='\t')
 
     # parse data
     phenotype.index = phenotype.loc[:,constants.config_json["phenotype_index"]]
-    phenotype=phenotype.loc[:,constants.config_json["phenotype_field"]]
-    phenotype_0=phenotype[phenotype.isin([constants.config_json["phenotype_values"][0]])].iloc[:194]
-    phenotype_1 = phenotype[phenotype.isin([constants.config_json["phenotype_values"][1]])]
+    phenotype_field = phenotype_args["name of variable"]
+    phenotype=phenotype.loc[:,phenotype_field]
+    phenotype_0=phenotype[phenotype.isin(phenotype_args["value1"])]
+    phenotype_1 = phenotype[phenotype.isin(phenotype_args["value2"])]
     phenotype=pd.concat([phenotype_0,phenotype_1], axis=0)
-    for a in constants.config_json["phenotype_values"]:
-        print(f'# of phenotype {a}: {(phenotype==a).sum()}')
+    for a in [phenotype_args["value1"],phenotype_args["value2"]]:
+        print(f'# of phenotype {a}: {(phenotype.isin(a)).sum()}')
     phenotype=phenotype.reindex(pcs_data.index).dropna(axis=0)
     pcs_data = pcs_data.reindex(phenotype.index).dropna(axis=0)
 
@@ -73,7 +88,9 @@ def main():
     n_iterations=100
     for a in np.arange(n_iterations):
         # run RF
-        X_train, X_test, y_train, y_test = train_test_split(pcs_data, [(constants.config_json["phenotype_values"].index(a)-1)*(-1) for a in phenotype], test_size = 0.33)
+        # print(pcs_data)
+        labels=[([a in phenotype_args["value1"], a in phenotype_args["value2"]].index(True)) for a in phenotype]
+        X_train, X_test, y_train, y_test = train_test_split(pcs_data, labels, test_size = 0.33)
         clf = RandomForestClassifier(max_depth=2, random_state=0)
         clf.fit(X_train, y_train)
         y_pred=clf.predict(X_test)
@@ -104,11 +121,15 @@ def main():
     # print averaged metrics
     print(f'RF accuracy: {np.mean(prediction_accuracies_rf)}')
     print(f'SVM accuracy: {np.mean(prediction_accuracies_svm)}')
-    print(f'RF average AUPR: {np.mean(pr_aucs)}')
-    print(f'SVM average AUROC: {np.mean(roc_aucs)}')
-    print(f'AUPR null (all labels are 1): {np.mean(pr_aucs_nulls)}')
-    print(f'AUROC null (all labels are 0): {np.mean(roc_aucs_nulls)}')
+    print(f'SVM average AUPR: {np.mean(pr_aucs)} (AUPR null (all labels are 1): {np.mean(pr_aucs_nulls)})')
+    print(f'SVM average AUROC: {np.mean(roc_aucs)} (null score (all labels are 1) is : {np.mean(roc_aucs_nulls)})')
 
+
+    with open(output_file, 'w') as o:
+        metrics = [prediction_accuracies_rf, prediction_accuracies_svm, pr_aucs, roc_aucs, pr_aucs_nulls,
+                   roc_aucs_nulls]
+        o.write("\t".join(["name", "N features", "RF accuracy", "SVM accuracy", "SVM AUPR", "SVM AUROC", "Null AUPR", "Null AUROC"]) + "\n")
+        o.write("\t".join([unique_folder_name, str(pcs_data.shape[1])] + [str(round(np.mean(m), 4)) for m in metrics]))
 
 if __name__ == "__main__":
     main()
