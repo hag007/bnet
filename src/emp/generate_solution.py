@@ -1,5 +1,6 @@
 import sys
 sys.path.insert(0, '../..')
+# import pandas as pd
 import json
 import argparse
 import os
@@ -26,24 +27,35 @@ def main():
     true_solutions_folder = args.true_solutions_folder
     additional_args = args.additional_args
 
+    generate_solution(dataset_file, algo, go_folder, network_file, true_solutions_folder, additional_args)
+
+
+def generate_solution(dataset_file, algo, go_folder, network_file, true_solutions_folder, additional_args):
+
+    print(f'start ({(dataset_file, algo, go_folder, network_file, true_solutions_folder ,additional_args)})')
     # init_state(go_folder)
-
-    additional_args_json = json.loads(args.additional_args)
-
+    additional_args_json = json.loads(additional_args)
     params_name = "_".join([str(additional_args_json[a]) for a in \
-                                ["ts", "min_temp", "temp_factor", "slice_threshold", "module_threshold", "sim_factor", "activity_baseline"]])
+                            ["ts", "min_temp", "temp_factor", "slice_threshold", "module_threshold", "sim_factor",
+                             "activity_baseline"]])
     # read files
-    dataset_name=os.path.splitext(os.path.split(dataset_file)[1])[0]
-    network_name=os.path.splitext(os.path.split(network_file)[1])[0]
-    output_folder=os.path.join(true_solutions_folder, "{}_{}_{}_{}".format(dataset_name,network_name,algo,params_name))
-
+    dataset_name = os.path.splitext(os.path.split(dataset_file)[1])[0]
+    network_name = os.path.splitext(os.path.split(network_file)[1])[0]
+    output_folder = os.path.join(true_solutions_folder,
+                                 "{}_{}_{}_{}".format(dataset_name, network_name, algo, params_name))
     try:
         os.makedirs(output_folder)
     except FileExistsError:
         pass
+    run_algo(dataset_file, algo, network_file, go_folder, os.path.join(output_folder), **json.loads(additional_args))
 
-    run_algo(dataset_file, algo, network_file, go_folder, os.path.join(output_folder) , **json.loads(additional_args))
+
+#
+# if __name__ == "__main__":
+#     main()
 
 
-if __name__ == "__main__":
-    main()
+
+# if __name__ == "__main__":
+#
+#     print(f"test")

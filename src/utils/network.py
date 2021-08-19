@@ -6,12 +6,8 @@ import time
 import shutil
 import sys
 import json
-import pandas as pd
 from functools import reduce
 
-# from df_helpers import to_full_list
-# from df_helpers import to_full_np
-# from utils.scripts import format_script
 from src.utils.ensembl2gene_symbol import e2g_convertor
 import zipfile
 
@@ -192,17 +188,17 @@ def build_all_reports(algo_name, modules, all_bg_genes, go_folder, output_folder
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
 
-    manager=multiprocessing.Manager()
-    all_hg_reports = manager.list()
-    modules_summary = manager.list()
+    # manager=multiprocessing.Manager()
+    all_hg_reports = [] # manager.list()
+    modules_summary = [] # manager.list()
 
     params=[]
-    p=multiprocessing.Pool(3)
+    # p=multiprocessing.Pool(3)
     for i, module in enumerate(modules):
-        params.append([module_report, [algo_name, i, module, all_bg_genes[i], go_folder, output_folder, modules_summary]])
-        # module_report(algo_name, i, module, all_bg_genes[i], go_folder, output_folder, modules_summary)
+        # params.append([module_report, [algo_name, i, module, all_bg_genes[i], go_folder, output_folder, modules_summary]])
+        module_report(algo_name, i, module, all_bg_genes[i], go_folder, output_folder, modules_summary)
 
-    p.map(func_star, params)
+    # p.map(func_star, params)
 
     modules_summary=list(modules_summary)
     all_hg_reports=list(all_hg_reports)
@@ -233,10 +229,10 @@ def build_all_reports(algo_name, modules, all_bg_genes, go_folder, output_folder
 
 
 def module_report(algo_name, module_index, module, bg_genes, go_folder, output_folder, modules_summary):
-    print("summarize module {} for algo {}".format(module_index, algo_name))
+    # print("summarize module {} for algo {}".format(module_index, algo_name))
 
     open(os.path.join(output_folder, "{}_module_genes_{}.txt".format(algo_name, module_index)), "w+").write(
-        "\n".join(module)) 
+        "\n".join(module))
     try:
         open(os.path.join(output_folder, "{}_bg_genes_{}.txt".format(algo_name, module_index)), "w+").write(
         "\n".join(bg_genes))
@@ -244,12 +240,12 @@ def module_report(algo_name, module_index, module, bg_genes, go_folder, output_f
         # print([a for a in bg_genes if type(a) != str])
         print(e)
         raise e
-         
+
     modules_summary_row = {SH_MODULE_NAME: module_index, SH_NUM_GENES: len(module)}
 
-    hg_report = check_group_enrichment(list(module), list(bg_genes), go_folder)
-    modules_summary_row[SH_ENRICHED] = len(hg_report)
-    module_enrichment_report(algo_name, "module_" + str(module_index), "separated_modules_hg_samples", hg_report, output_folder)
+    # hg_report = check_group_enrichment(list(module), list(bg_genes), go_folder)
+    # modules_summary_row[SH_ENRICHED] = len(hg_report)
+    # module_enrichment_report(algo_name, "module_" + str(module_index), "separated_modules_hg_samples", hg_report, output_folder)
 
     if modules_summary is not None:
         modules_summary.append(modules_summary_row)

@@ -12,6 +12,8 @@ import pandas as pd
 import argparse
 import json
 import itertools
+import numpy as np
+import matplotlib.pyplot as plt
 
 from multiprocessing.pool import Pool
 
@@ -22,7 +24,7 @@ def main():
     parser = argparse.ArgumentParser(description='args')
     parser.add_argument('--dataset_files', dest='dataset_files', default=constants.config_json["dataset_files"])
     parser.add_argument('--phenotypes_file', dest='phenotypes_file', default=constants.config_json["phenotypes_file"])
-    parser.add_argument('--algo', dest='algo', default=constants.config_json["algo"])
+    parser.add_argument('--algos', dest='algos', default=constants.config_json["algos"])
     parser.add_argument('--network_file', dest='network_file', default=constants.config_json["network_file"])
     parser.add_argument('--go_folder', dest='go_folder', default=constants.config_json["go_folder"])
     parser.add_argument('--true_solutions_folder', dest='true_solutions_folder',
@@ -39,7 +41,7 @@ def main():
     args = parser.parse_args()
     dataset_files = args.dataset_files
     phenotypes_file = args.phenotypes_file
-    algo = args.algo
+    algos = args.algos.split(",")
     true_solutions_folder = args.true_solutions_folder
     tuning_comb_args = args.tuning_comb
     metrics_folder = args.metrics_folder
@@ -47,50 +49,135 @@ def main():
 
     tuning_comb = json.loads(str(tuning_comb_args))
     combs = list(itertools.product(*tuning_comb.values()))
-    p = Pool(5)
-    params = []
-    combs_str = f"report_{algo}"
 
-    phenotypes_df = pd.read_csv(phenotypes_file)
+    df_algos_mean=pd.DataFrame(columns=["N features", "RF accuracy","SVM accuracy","SVM AUPR","SVM AUROC","Null AUPR","Null AUROC","SVM AUPR diff","SVM AUROC diff", "number of datasets"])
+    df_algos_median = pd.DataFrame(
+        columns=["N features", "RF accuracy", "SVM accuracy", "SVM AUPR", "SVM AUROC", "Null AUPR", "Null AUROC",
+                 "SVM AUPR diff", "SVM AUROC diff", "number of datasets"])
+    df_algos_max = pd.DataFrame(
+        columns=["N features", "RF accuracy", "SVM accuracy", "SVM AUPR", "SVM AUROC", "Null AUPR", "Null AUROC",
+                 "SVM AUPR diff", "SVM AUROC diff", "number of datasets"])
+    df_algo_max_comb = pd.DataFrame()
+    for algo in algos:
 
-    dataset_files=phenotypes_df.loc[:,"path to genes"]
+        # p = Pool(5)
+        params = []
+        combs_str = f"report_{algo}"
 
-    for dataset_file in dataset_files:
-        dataset_name = os.path.splitext(os.path.split(dataset_file)[1])[0]
-        combs_str += "_" + dataset_name
-        for network_file in network_files:
-            network_name = os.path.splitext(os.path.split(network_file)[1])[0]
-            combs_str += "_" + network_name
-            for comb in combs:
-                params.append([dataset_name, network_name, algo, true_solutions_folder, comb, tuning_comb])
+        phenotypes_df = pd.read_csv(phenotypes_file)
 
-    combs_str += "_" + "_".join([str(tuning_comb[a]) for a in \
-                                                                ["ts", "min_temp", "temp_factor", "slice_threshold",
-                                                                 "module_threshold", "sim_factor",
-                                                                 "activity_baseline"]])
-    results = p.map(fetch_metrics, params)
+        dataset_files=phenotypes_df.loc[:,"path to genes"]
 
-    df = pd.DataFrame()
-    for result in results:
-        df = pd.concat([df, result])
+        df_means=pd.DataFrame(columns=["N features", "RF accuracy","SVM accuracy","SVM AUPR","SVM AUROC","Null AUPR","Null AUROC","SVM AUPR diff","SVM AUROC diff", "number of datasets"])
+        df_median = pd.DataFrame(
+            columns=["N features", "RF accuracy", "SVM accuracy", "SVM AUPR", "SVM AUROC", "Null AUPR", "Null AUROC",
+                     "SVM AUPR diff", "SVM AUROC diff", "number of datasets"])
+        df_max = pd.DataFrame(columns=["N features", "RF accuracy", "SVM accuracy", "SVM AUPR", "SVM AUROC", "Null AUPR", "Null AUROC", "SVM AUPR diff", "SVM AUROC diff", "number of datasets"])
+        for comb in combs:
 
-    if not os.path.isdir(metrics_folder):
-        os.makedirs(metrics_folder)
-    fname = os.path.join(metrics_folder, f"{combs_str}.csv")
-    df.to_csv(fname, sep='\t')
+            cur_tuning_json = {k: v for k, v in zip(tuning_comb.keys(), comb)}
+            params=[]
+
+            network_names=[]
+            for network_file in network_files:
+                network_name = os.path.splitext(os.path.split(network_file)[1])[0]
+                combs_str += "_" + network_name
+                network_names.append(network_name)
+
+                for dataset_file in dataset_files:
+                    dataset_name = os.path.splitext(os.path.split(dataset_file)[1])[0]
+                    combs_str += "_" + dataset_name
+
+                    params.append([dataset_name, network_name, algo, true_solutions_folder, cur_tuning_json])
+
+            cur_tuning_json_str="_".join([str(cur_tuning_json[a]) for a in \
+                                                                        ["ts", "min_temp", "temp_factor", "slice_threshold",
+                                                                         "module_threshold", "sim_factor",
+                                                                         "activity_baseline"]])
+            network_names_str = "_".join(network_names)
+            combs_str += "_"+cur_tuning_json_str
+            # results = p.map(, params)
+            results=[fetch_metrics(prm) for prm in params]
+            results=[a for a in results  if not a is None]
+            df = pd.DataFrame()
+            for result in results:
+                df = pd.concat([df, result])
+
+            if not os.path.isdir(metrics_folder):
+                os.makedirs(metrics_folder)
+            fname = os.path.join(metrics_folder, f"agg_report_{algo}_{cur_tuning_json_str}_{network_names_str}.tsv") # combs_str
+            print(fname)
+            df.to_csv(fname, sep='\t')
+            cur_index=f'{cur_tuning_json_str}_{network_names_str}'
+            if df_means is None:
+                df_means=pd.DataFrame(index=[], data=[df.dropna(axis=0).mean(axis=0)])
+            if df_median is None:
+                df_median=pd.DataFrame(index=[], data=[df.dropna(axis=0).median(axis=0)])
+            else:
+                if not df.empty:
+                    df.loc[:, "SVM AUPR diff"] = df.loc[:, "SVM AUPR"] - df.loc[:, "Null AUPR"]
+                    df.loc[:, "SVM AUROC diff"] = df.loc[:, "SVM AUROC"] - df.loc[:, "Null AUROC"]
+                df_means.loc[cur_index]=df.dropna(axis=0).mean(axis=0)
+                df_means.loc[cur_index, "number of datasets"] = df.dropna(axis=0).shape[0]
+                df_median.loc[cur_index] = df.dropna(axis=0).mean(axis=0)
+                df_median.loc[cur_index, "number of datasets"] = df.dropna(axis=0).shape[0]
+                df_max.loc[cur_index] = df.dropna(axis=0).max(axis=0)
+                df_max.loc[cur_index, "number of datasets"] = df.dropna(axis=0).shape[0]
+
+            # for col in df.columns:
+            #     if not col.startswith("Null"):
+            #         plt.hist(df[col], bins='auto')  # arguments are passed to np.histogram
+            #         plt.title(f"{algo} - {network_names_str} - {col} - {cur_tuning_json_str}\n{np.std(df[col].values)}")
+            #
+            #         plt.savefig(
+            #             f"/home/gaga/hagailevi/omics/output/histograms/{algo} - {network_names_str} - {col} - {cur_tuning_json_str}.png")
+            #         plt.close('all')
+
+
+        fname = os.path.join(metrics_folder, f"agg_report_{algo}_{network_names_str}.tsv")  # combs_str
+        df_means=df_means.dropna(axis=0)
+        df_means.to_csv(fname, sep='\t')
+        df_algos_mean.loc[algo]=df_means.mean(axis=0)
+        df_algos_mean.loc[algo,"number of combinations"] = df_means.shape[0]
+        df_algos_median.loc[algo] = df_means.mean(axis=0)
+        df_algos_median.loc[algo, "number of combinations"] = df_means.shape[0]
+        df_algos_max.loc[algo] = df_means.max(axis=0)
+        df_algos_max.loc[algo, "number of combinations"] = df_means.shape[0]
+
+        df_max_comb=pd.isnull(df_means[df_means == df_means.max(axis=0)]).applymap(lambda a: not a)
+        df_max_comb=df_max_comb.drop(columns=['Null AUROC', 'Null AUPR', 'number of datasets'])
+        df_max_comb=df_max_comb[df_max_comb.apply(lambda a: any(a), axis=1)]
+        df_max_comb=df_max_comb.apply(lambda a: list(df_max_comb.index[a]))
+        if not df_max_comb.empty:
+            df_algo_max_comb.loc[:,algo]=pd.DataFrame(df_max_comb).iloc[0]
+
+
+    fname = os.path.join(metrics_folder, f"agg_report_{network_name}_{'_'.join(algos)}_mean.tsv")  # combs_str
+    df_algos_mean.to_csv(fname, sep='\t')
+    fname = os.path.join(metrics_folder, f"agg_report_{network_name}_{'_'.join(algos)}_median.tsv")  # combs_str
+    df_algos_median.to_csv(fname, sep='\t')
+    fname = os.path.join(metrics_folder, f"agg_report_{network_name}_{'_'.join(algos)}_max.tsv")  # combs_str
+    df_algos_max.to_csv(fname, sep='\t')
+    fname = os.path.join(metrics_folder, f"agg_report_{network_name}_{'_'.join(algos)}_arg_max.tsv")  # combs_str
+    df_algo_max_comb.to_csv(fname, sep='\t')
+
 
 
 def fetch_metrics(args):
 
-    dataset_name, network_name, algo, true_solutions_folder, comb, tuning_comb = args
-    tuning_args = {k: v for k, v in zip(tuning_comb.keys(), comb)}
+    dataset_name, network_name, algo, true_solutions_folder, tuning_args = args
+
     params_name = "_".join([str(tuning_args[a]) for a in \
                             ["ts", "min_temp", "temp_factor", "slice_threshold", "module_threshold", "sim_factor",
                              "activity_baseline"]])
 
     result_folder = os.path.join(true_solutions_folder, "{}_{}_{}_{}".format(dataset_name, network_name, algo, params_name))
     report_file = os.path.join(result_folder, "report.tsv")
-    df = pd.read_csv(report_file, sep='\t', index_col=0)
+    if os.path.exists(report_file):
+        df = pd.read_csv(report_file, sep='\t', index_col=0)
+    else:
+        df=None
+
     return df
 
 

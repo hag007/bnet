@@ -27,18 +27,20 @@ has_go_resources = False
 has_go_metadata = False
 has_go_hierarchy = False
 loading_metadata = False
+similarity=''
 ROOT = 'GO:0008150'
 CUTOFF = 7
 ssbatch= None
 
-def init_go_metadata():
+def init_go_metadata(sim):
     global has_go_metadata
     global loading_metadata
     global ssbatch
     global ontology
     global ac
+    global similarity
 
-    if not has_go_metadata and not loading_metadata:
+    if not has_go_metadata and not loading_metadata and sim!=similarity:
         loading_metadata = True
         ontology_type = 'GeneOntology'
         ignore_parameters = {'ignore': {}}
@@ -56,8 +58,9 @@ def init_go_metadata():
 
         has_go_metadata = True
         loading_metadata = False
+        similarity=sim
 
-        ssbatch = fastsemsim.init_batchsemsim(ontology=ontology, ac=ac, semsim_type='obj', semsim_measure='Resnik',
+        ssbatch = fastsemsim.init_batchsemsim(ontology=ontology, ac=ac, semsim_type='obj', semsim_measure=similarity,
                                               mixing_strategy='BMA')
         ssbatch.set_root('biological_process')
         ssbatch.set_output(output=None)
@@ -123,17 +126,28 @@ def calc_similarity(mat_adj, x, y, semsim):
 
 def calc_similarity_pairs(set_0, set_1):
     sm=0
+    n=0
     for cur_0 in set_0:
         for cur_1 in set_1:
-            if len(ensembl2uniprot_convertor([cur_0]) + ensembl2uniprot_convertor([cur_1])) < 2:
-                sm+=0.5
-            else:
+            # if len(ensembl2uniprot_convertor([cur_0]) + ensembl2uniprot_convertor([cur_1])) < 2:
+                # sm+=0.5
+            # else:
+
+            if len(ensembl2uniprot_convertor([cur_0]))!=0 and len(ensembl2uniprot_convertor([cur_1]))!=0:
                 cur=ssbatch.SemSim(query=[ensembl2uniprot_convertor([cur_0]) + ensembl2uniprot_convertor([cur_1])]).iloc[0,2]
-                if cur is None:
-                    sm +=0.5
-                else:
+                # if cur is None:
+                    # sm +=0.5
+                # else:
+                if not cur is None:
                     sm+=cur
-    return 1/(1+(sm/(len(set_0)*len(set_1))))
+                    n+=1
+
+    if n==0:
+        open("/specific/netapp5/gaga/hagailevi/omics/output/weights/dynamic_weights.txt", 'a+').write(f'{0.5}\n')
+        return 0.5
+
+    open("/specific/netapp5/gaga/hagailevi/omics/output/weights/dynamic_weights.txt", 'a+').write(f'{sm / n}\n')
+    return 1-sm/n
 
 def calc_similarity_matrix(set_0, set_1, pf, cache_file, sim_method='Resnik'):
     cache_loaded = False
@@ -272,4 +286,3 @@ def is_parent(parent, child):
     return adj, all_go_terms
 
 
-init_go_metadata()

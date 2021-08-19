@@ -5,14 +5,16 @@ import os
 import pandas as pd
 
 from src import constants
-from src.implementations.bnet_dynamic import main as domino_main
+from src.implementations.bnet_dynamic import main as bnet_main
 from src.utils.ensembl2entrez import ensembl2entrez_convertor
 from src.utils.network import get_network_genes
+from src.utils.go_similarity import init_go_metadata
 
 from src.runners.abstract_runner import AbstractRunner
 class BnetRunner(AbstractRunner):
-    def __init__(self):
-        super().__init__("BNET")
+    def __init__(self, similarity):
+        self.similarity=similarity
+        super().__init__(f"BNET_dynamic_{similarity}")
 
 
     def extract_modules_and_bg(self, bg_genes, dest_algo_dir):
@@ -40,7 +42,8 @@ class BnetRunner(AbstractRunner):
 
 
     def run(self, dataset_file_name, network_file_name, output_folder, **kwargs):
-        print("run domino runner...")
+        print("run bnet_dynamic runner...")
+        init_go_metadata(self.similarity)
         slices_file = kwargs['slices_file']
         constants.N_OF_THREADS=1
         if 'n_of_threads' in kwargs:
@@ -55,10 +58,10 @@ class BnetRunner(AbstractRunner):
         if 'module_threshold' in kwargs:
             module_threshold = kwargs['module_threshold']
         active_genes_file, bg_genes = self.init_params(dataset_file_name, network_file_name, output_folder)
-        print(f'domino_parameters: active_genes_file={active_genes_file}, network_file={network_file_name},slices_file={slices_file}, slice_threshold={slice_threshold},module_threshold={module_threshold}')
-        modules = domino_main(active_genes_file=dataset_file_name, network_file=network_file_name,
-                              slices_file=slices_file, slice_threshold=slice_threshold,
-                              module_threshold=module_threshold)
+        # print(f'domino_parameters: active_genes_file={active_genes_file}, network_file={network_file_name},slices_file={slices_file}, slice_threshold={slice_threshold},module_threshold={module_threshold}')
+        modules = bnet_main(active_genes_file=dataset_file_name, network_file=network_file_name,
+                            slices_file=slices_file, slice_threshold=slice_threshold,
+                            module_threshold=module_threshold)
         modules = list(filter(lambda x: len(x) > 3, modules))
         all_bg_genes = [bg_genes for x in modules]
         return modules, all_bg_genes
