@@ -177,7 +177,9 @@ def modify_subslice(cur_subslice, cur_slice, t):
 
 def get_edge_weight(edge):
 
-    return  np.abs(G_modularity.get_edge_data(edge[0],edge[1])["score"])
+    open("/specific/netapp5/gaga/hagailevi/omics/output/weights/static_weights.txt", 'a+').write(
+        f'{1/(1+G_modularity.get_edge_data(edge[0],edge[1])["score"]/200.0)}\n')
+    return  1/(1+G_modularity.get_edge_data(edge[0],edge[1])["score"]/200.0)
 
 def add_to_subslice(cur_subslice, cur_slice, t):
     cur_slice_minus_cur_subslice=cur_slice.copy()

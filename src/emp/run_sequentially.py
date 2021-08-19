@@ -11,32 +11,40 @@ import pandas as pd
 import argparse
 import json
 import itertools
+import time
 
 from multiprocessing.pool import Pool
+from multiprocessing import Process
+
+from src.emp.generate_solution import generate_solution
+from src.emp.calc_pcs import calc_pcs
+from src.emp.calc_prediction import calc_prediction
+
+from src.utils.daemon_multiprocessing import MyPool
 
 current_path=os.path.dirname(os.path.realpath(__file__))
 
 
-def execute_stage(py_script, params):
+def execute_stage(py_function, params):
 
-    params = " ".join(params)
-    print("about to start script {} with params:\n{}".format(py_script, params))
-    prc=subprocess.Popen("{}../bnet-env/bin/python {} {}".format(constants.dir_path, py_script, params), shell=True,
-                           stdout=subprocess.PIPE, cwd=current_path)
-    # out = prc.stdout.read()
-    # print(out)
-    while True:
-        output = prc.stdout.readline()
-        if output == b'': #  and prc.poll() is not None:
-            break
-        if output:
-            out_str=output.decode("utf-8")
-            print(out_str, end ='')
-
-    rc = prc.poll()
-
-
-    return rc # 0 # prc.close()
+    # print("about to start script {} with params:\n{}".format(py_function, params))
+    py_function(**params)
+    # prc=subprocess.Popen("{}../bnet-env/bin/python {} {}".format(constants.dir_path, py_function, params), shell=True,
+    #                      stdout=subprocess.PIPE, cwd=current_path)
+    # # out = prc.stdout.read()
+    # # print(out)
+    # while True:
+    #     output = prc.stdout.readline()
+    #     if output == b'': #  and prc.poll() is not None:
+    #         break
+    #     if output:
+    #         out_str=output.decode("utf-8")
+    #         print(out_str, end ='')
+    #
+    # rc = prc.poll()
+    #
+    #
+    # return rc # 0 # prc.close()
 
 
 
@@ -69,32 +77,44 @@ def main():
 
     phenotypes_df = pd.read_csv(phenotypes_file)
 
-
-    algo_param="--algo {}".format(algo)
-    true_solutions_folder_param = "--true_solutions_folder {}".format(true_solutions_folder)
-    go_folder_param = "--go_folder {}".format(go_folder)
-    pf_param = "--pf {}".format(pf)
+    algo_param="{}".format(algo)
+    true_solutions_folder_param = "{}".format(true_solutions_folder)
+    go_folder_param = "{}".format(go_folder)
+    pf_param = "{}".format(pf)
     tuning_comb = json.loads(str(tuning_comb_args))
     combs=list(itertools.product(*tuning_comb.values()))
-    p=Pool(1)
+    p=Pool(int(pf))
     params=[]
-    for i, row in phenotypes_df.iterrows():
-        dataset_file_params = "--dataset_file {}".format(row.loc["path to genes"])
-        tcga_path = row.loc["path to TCGA file"]
-        var_name = row.loc["name of variable"]
-        val1 = row.loc['value1'].replace("'",'\\\"')
-        val2 = row.loc['value2'].replace("'",'\\\"')
-        # phenotypes_params = '--phenotype_args "{\"path to TCGA file\": \"{}\", \"name of variable\": \"{}\", \"value1\" : [{}], \"value2\" : [{}]}"'.format(\
-        #                                     tcga_path, var_name,val1,val2)
+    for comb in combs:
+        for i, row in phenotypes_df.iterrows():
+            dataset_file_params = "{}".format(row.loc["path to genes"])
+            tcga_path = row.loc["path to TCGA file"]
+            var_name = row.loc["name of variable"]
+            val1 = row.loc['value1'].replace("'",'\\\"')
+            val2 = row.loc['value2'].replace("'",'\\\"')
+            # phenotypes_params = '--phenotype_args "{\"path to TCGA file\": \"{}\", \"name of variable\": \"{}\", \"value1\" : [{}], \"value2\" : [{}]}"'.format(\
+            #                                     tcga_path, var_name,val1,val2)
 
-        phenotypes_params = '--phenotype_args "{\\\"path to TCGA file\\\": \\\"'+tcga_path+'\\\", \\\"name of variable\\\": \\\"'+var_name+'\\\", \\\"value1\\\" : '+val1+', \\\"value2\\\" : '+val2+'}"'
+            phenotypes_params = json.loads('"{\\\"path to TCGA file\\\": \\\"'+tcga_path+'\\\", \\\"name of variable\\\": \\\"'+var_name+'\\\", \\\"value1\\\" : '+val1+', \\\"value2\\\" : '+val2+'}"')
 
+            prs=[]
+            for network_file in network_files:
+                network_file_param = network_file
 
-        for network_file in network_files:
-            network_file_param = "--network_file {}".format(network_file)
-            for comb in combs:
+                # pr=Process(target=execute_one_series, args=([additional_args, phenotypes_params, algo_param, comb, dataset_file_params, go_folder_param,
+                # network_file_param, processes, true_solutions_folder_param, tuning_comb],))
+                # pr.start()
+                # prs.append(pr)
+
+                # if len(prs)==1:
+                #     for pr in prs:
+                #         pr.join()
+                #     prs=[]
+                #
                 params.append([additional_args, phenotypes_params, algo_param, comb, dataset_file_params, go_folder_param,
                 network_file_param, processes, true_solutions_folder_param, tuning_comb])
+
+
     p.map(execute_one_series,params)
 
 
@@ -103,23 +123,53 @@ def execute_one_series(args):
     tuning_args = {k: v for k, v in zip(tuning_comb.keys(), comb)}
     additional_args = json.loads(additional_args)
     additional_args.update(tuning_args)
-    print(additional_args)
+    additional_args['cancer_type']=os.path.basename(dataset_file_params).split('_')[1].upper()
+    additional_args['slices_file'] = f'{"/".join(network_file_param.split("/")[:-1])}/{os.path.splitext(os.path.basename(network_file_param))[0]}_louvain_slices.txt'
     additional_args = json.dumps(additional_args)
-    additional_args_param = "--additional_args {}".format(json.dumps(str(additional_args)))
-    params_by_processes = {
-        "generate_solution": [dataset_file_params, algo_param, network_file_param, go_folder_param,
-                              true_solutions_folder_param, additional_args_param],
-        "calc_pcs": [dataset_file_params, algo_param, network_file_param, go_folder_param,
-                     true_solutions_folder_param, additional_args_param],
-        "calc_prediction": [dataset_file_params, algo_param, network_file_param, go_folder_param,
-                            true_solutions_folder_param, additional_args_param, phenotypes_params]}
+    additional_args_param = str(additional_args)
+    # params_by_process = {
+    #     "generate_solution": [dataset_file_params, algo_param, network_file_param, go_folder_param,
+    #                           true_solutions_folder_param, additional_args_param],
+    #     "calc_pcs": [dataset_file_params, algo_param, network_file_param, go_folder_param,
+    #                  true_solutions_folder_param, additional_args_param, phenotypes_params],
+    #     "calc_prediction": [dataset_file_params, algo_param, network_file_param, go_folder_param,
+    #                         true_solutions_folder_param, additional_args_param, phenotypes_params]}
+
+    function_by_process ={
+        "generate_solution": generate_solution,
+        "calc_pcs": calc_pcs,
+        "calc_prediction": calc_prediction
+    }
+
+    params_by_process = {
+        "generate_solution": {"dataset_file" : dataset_file_params, "algo" : algo_param, "network_file" : network_file_param , "go_folder" : go_folder_param,
+                              "true_solutions_folder": true_solutions_folder_param, "additional_args" : additional_args_param},
+        "calc_pcs": {"dataset_file" : dataset_file_params, "algo" : algo_param, "network_file" : network_file_param ,
+                              "true_solutions_folder": true_solutions_folder_param, "additional_args" : additional_args_param, "phenotype_args":phenotypes_params},
+        "calc_prediction": {"dataset_file" : dataset_file_params, "algo" : algo_param, "network_file" : network_file_param ,
+                              "true_solutions_folder": true_solutions_folder_param, "additional_args" : additional_args_param, "phenotype_args":phenotypes_params}}
+
+    dataset_name = os.path.splitext(os.path.split(dataset_file_params)[1])[0]
+    network_name = os.path.splitext(os.path.split(network_file_param)[1])[0]
+    params_name = "_".join([str(json.loads(additional_args)[a]) for a in \
+                            ["ts", "min_temp", "temp_factor", "slice_threshold", "module_threshold",
+                             "sim_factor", "activity_baseline"]])
+    unique_folder_name = "{}_{}_{}_{}".format(dataset_name, network_name, algo_param,
+                                              params_name)
+
+    # print(os.path.join(true_solutions_folder_param, unique_folder_name, "report.tsv"))
+    if os.path.exists(os.path.join(true_solutions_folder_param, unique_folder_name, "report.tsv")) and constants.config_json['use_cache']=='true':
+        print("already exists")
+        return
+
     for cur_process in processes:
-        if cur_process not in params_by_processes:
+
+        if cur_process not in params_by_process:
             print("unknown process detected: {}. abort...".format(cur_process))
             raise Exception
     try:
         for cur_process in processes:
-            execute_stage(cur_process + ".py", params_by_processes[cur_process])
+            execute_stage(function_by_process[cur_process], params_by_process[cur_process])
 
     except Exception as e:
         print("error in {}: {}".format(cur_process, e))

@@ -5,7 +5,7 @@ import os
 import pandas as pd
 
 from src import constants
-from src.implementations.bnet_static_corr import main as domino_main
+from src.implementations.bnet_static_corr import main as bnet_main
 from src.utils.ensembl2entrez import ensembl2entrez_convertor
 from src.utils.network import get_network_genes
 
@@ -40,14 +40,14 @@ class BnetStaticCorrRunner(AbstractRunner):
 
 
     def run(self, dataset_file_name, network_file_name, output_folder, **kwargs):
-        print("run domino runner...")
+        print("run bnet_static_corr runner...")
         slices_file = kwargs['slices_file']
         constants.N_OF_THREADS=1
         if 'n_of_threads' in kwargs:
             constants.N_OF_THREADS=kwargs['n_of_threads']
         constants.USE_CACHE=False
         if 'use_cache' in kwargs:
-            constants.USE_CACHE=False # kwargs['use_cache']=='true'
+            constants.USE_CACHE=kwargs['use_cache']=='true'
         slice_threshold = 0.3
         if 'slice_threshold' in kwargs:
             slice_threshold = kwargs['slice_threshold']
@@ -61,9 +61,9 @@ class BnetStaticCorrRunner(AbstractRunner):
 
         active_genes_file, bg_genes = self.init_params(dataset_file_name, network_file_name, output_folder)
         print(f'domino_parameters: active_genes_file={active_genes_file}, network_file={network_file_name},slices_file={slices_file}, slice_threshold={slice_threshold},module_threshold={module_threshold}')
-        modules = domino_main(active_genes_file=dataset_file_name, network_file=network_file_name,
-                              slices_file=slices_file, slice_threshold=slice_threshold,
-                              module_threshold=module_threshold)
+        modules = bnet_main(active_genes_file=dataset_file_name, network_file=network_file_name,
+                            slices_file=slices_file, slice_threshold=slice_threshold,
+                            module_threshold=module_threshold)
         modules = list(filter(lambda x: len(x) > 3, modules))
         all_bg_genes = [bg_genes for x in modules]
         return modules, all_bg_genes

@@ -1,6 +1,6 @@
 import os
 import sys
-sys.path.insert(0, '../..')
+sys.path.insert(0, '../../..')
 import json
 import argparse
 from src.runners.run_algo import run_algo

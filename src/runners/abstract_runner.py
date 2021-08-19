@@ -19,9 +19,9 @@ class AbstractRunner(object):
            os.makedirs(os.path.split(self.full_path)[0])
         except Exception as e:
            print(e)
-     
+
         open(self.full_path, 'w+').write("9999")
- 
+
         raise Exception("end of time")
 
     def run(self, dataset_file_name, network_file_name, output_folder, **kwargs):
@@ -37,13 +37,13 @@ class AbstractRunner(object):
         print("basic_name: {}".format(basic_name))
         if "random" in basic_name:
 
-            self.full_path=os.path.join(constants.TIMER_DIR, os.path.splitext(os.path.basename(network_file_name))[0], basic_name.split("_")[-3], "_".join(basic_name.split("_")[1:-3]+ basic_name.split("_")[-1:]))+".txt" 
+            self.full_path=os.path.join(constants.TIMER_DIR, os.path.splitext(os.path.basename(network_file_name))[0], basic_name.split("_")[-3], "_".join(basic_name.split("_")[1:-3]+ basic_name.split("_")[-1:]))+".txt"
         else:
             self.full_path=os.path.join(constants.TIMER_DIR, os.path.splitext(os.path.basename(network_file_name))[0], basic_name.split("_")[0], "_".join(basic_name.split("_")[1:]))+".txt"
 
         signal.signal(signal.SIGALRM, self.handler)
         signal.alarm(int(60*60*100))
-        tic = time.perf_counter() 
+        tic = time.perf_counter()
         try:
             modules, all_bg_genes = self.run(os.path.abspath(dataset_file_name), os.path.abspath(network_file_name), os.path.abspath(output_folder), **kwargs)
             toc = time.perf_counter()
@@ -52,16 +52,16 @@ class AbstractRunner(object):
                 return
             else:
                 raise e
-               
+
         print(f"algo execution time: {toc-tic:0.2f}")
- 
+
         try:
            os.makedirs(os.path.split(self.full_path)[0])
         except Exception as e:
            print(e)
-     
+
         open(self.full_path, 'w+').write(f"{toc-tic:0.2f}")
-  
+
         print(f"calculate GO enrichment for {len(modules)} modules")
         self.build_all_reports(self.ALGO_NAME, modules, all_bg_genes, os.path.abspath(go_folder), os.path.abspath(os.path.join(output_folder, "modules")))
 
@@ -72,3 +72,4 @@ class AbstractRunner(object):
 
         modules, all_bg_genes = self.run(os.path.abspath(dataset_file_name), os.path.abspath(network_file_name), os.path.abspath(output_folder), **kwargs)
         self.build_all_reports(self.ALGO_NAME, modules, all_bg_genes, os.path.abspath(go_folder), os.path.abspath(os.path.join(output_folder, "modules")))
+

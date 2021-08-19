@@ -27,14 +27,13 @@ import src.constants as constants
 
 G_modularity = None
 
-ACTIVITY_BASELINE=0 # 0.2
-SIMILARITY_FACTOR=2.5 # 0.2
-def extract_scores(scores_file):
+
+def extract_scores(scores_file,qval_norm=1.3):
     """"""
     scores = pd.read_csv(scores_file, sep='\t', index_col=0)
     if "qval" in scores.columns:
 
-        scores["score"] = -np.log10(scores["qval"])/1.3
+        scores["score"] = -np.log10(scores["qval"])/qval_norm
     else:
         scores = pd.read_csv(scores_file, sep='\t', index_col=0, header=None, dtype=str)
         scores["score"] = 1
@@ -56,7 +55,7 @@ def add_scores_to_nodes(G, scores):
             G.nodes[ind]["pertubed_node"] = (row["score"] >= 1)  # binarizing the activeness
             c+=int(row["score"] >= 1)
 
-    print(f'c={c}')
+    # print(f'c={c}')
 
     return G
 
@@ -72,26 +71,26 @@ def create_subgraph(params):
 def prune_network_by_modularity(G, modules, cache_file):
     global G_modularity
     if os.path.exists(cache_file) and constants.USE_CACHE:
-        print(f'fetch cache file for subnetworks {cache_file}')
+        # print(f'fetch cache file for subnetworks {cache_file}')
         G_modularity = pickle.load(open(cache_file, 'rb'))
         for n in G_modularity:
             G_modularity.nodes[n]['pertubed_node'] = G.nodes[n]['pertubed_node']
-        print('pkl is loaded')
+        # print('pkl is loaded')
         return G_modularity
 
-    print(f'generating subgraphs...')
+    # print(f'generating subgraphs...')
     G_modularity = G
-    print(f"Before slicing: n of cc:{len(list(connected_components(G_modularity)))}, n of nodes: {len(G_modularity.nodes)}, n of edges, {len(G_modularity.edges)}")
-    p = multiprocessing.Pool(constants.N_OF_THREADS)
+    # print(f"Before slicing: n of cc:{len(list(connected_components(G_modularity)))}, n of nodes: {len(G_modularity.nodes)}, n of edges, {len(G_modularity.edges)}")
+    # p = multiprocessing.Pool(constants.N_OF_THREADS)
 
-    G_modules = p.map(create_subgraph, [m for m in modules])
-    p.close()
+    G_modules = [create_subgraph(m) for m in modules]
+    # p.close()
     # print(f'{modules}')
-    print(f'# of modules after extraction: {len(G_modules)}')
+    # print(f'# of modules after extraction: {len(G_modules)}')
     G_modularity = nx.algorithms.operators.union_all(G_modules)
-    print(f"After slicing: n of cc:{len(list(connected_components(G_modularity)))}, n of nodes: {len(G_modularity.nodes)}, n of edges, {len(G_modularity.edges)}")
+    # print(f"After slicing: n of cc:{len(list(connected_components(G_modularity)))}, n of nodes: {len(G_modularity.nodes)}, n of edges, {len(G_modularity.edges)}")
     pickle.dump(G_modularity, open(cache_file, 'wb+'))
-    print('subgraphs\' pkl is saved')
+    # print('subgraphs\' pkl is saved')
 
 
 def prune_network_by_modularity_old(G, modules, dummy):
@@ -114,10 +113,10 @@ def get_seeds(slice, threhold):
 
 
 def sa_for_slice(params):
-    G, slice, i_slice, ts, relevant_slices, prize_factor, module_threshold = params
+    G, slice, i_slice, ts, min_temp, temp_factor, relevant_slices, module_threshold, min_n_genes, sim_factor, activity_baseline = params
     score_sum=sum([G.nodes[a]["score"] for a in slice.nodes])
     subslices = [(G.subgraph(a), G.nodes[a]["score"]/score_sum) for a in slice.nodes]
-    for t in np.arange(ts+10, 10,-1):
+    for t in np.arange(ts+min_temp, min_temp,-1):
         random.shuffle(subslices)
         rand_num = np.random.uniform(0, 1, 1)
         prob_agg=0
@@ -125,7 +124,7 @@ def sa_for_slice(params):
             prob_agg+=subslice[1]
             # print(f'cur prob: {prob_agg}')
             if prob_agg >= rand_num:
-                updated_subslice_subgraph = modify_subslice(subslices[subslice_index][0], slice, t/40.0)
+                updated_subslice_subgraph = modify_subslice(subslices[subslice_index][0], slice, t/temp_factor,min_n_genes,sim_factor,activity_baseline)
                 break
         subslices=update_subslice_probabilities([a[0] for a in subslices], updated_subslice_subgraph, subslice_index, score_sum)
         # print("current iteration:")
@@ -134,11 +133,11 @@ def sa_for_slice(params):
     if sum([len([b for a in subslices for b in a[0].nodes  if slice.nodes[b]["pertubed_node"]])]) > len([a for a in slice if slice.nodes[a]["pertubed_node"]]):
         x=1
 
-    print('subslices fraction for original slice: {}'.format((sum([len(a[0].nodes) for a in subslices]),
-    len(slice.nodes),
-    sum([len([b for a in subslices for b in a[0].nodes  if slice.nodes[b]["pertubed_node"]])]),
-    len([a for a in slice if slice.nodes[a]["pertubed_node"]]),
-    [len(a[0].nodes) for a in subslices])))
+    # print('subslices fraction for original slice: {}'.format((sum([len(a[0].nodes) for a in subslices]),
+    # len(slice.nodes),
+    # sum([len([b for a in subslices for b in a[0].nodes  if slice.nodes[b]["pertubed_node"]])]),
+    # len([a for a in slice if slice.nodes[a]["pertubed_node"]]),
+    # [len(a[0].nodes) for a in subslices])))
     return [a[0] for a in subslices]
 
 
@@ -165,21 +164,18 @@ def update_subslice_probabilities(subslices, new_subslice, modified_subslice_ind
 
 
 
-def modify_subslice(cur_subslice, cur_slice, t):
+def modify_subslice(cur_subslice, cur_slice, t,min_n_genes=4,sim_factor=2.5,activity_baseline=0):
     step = np.random.binomial(1, 0.5)
     modified_slice = None
-    if (step or len(cur_subslice.nodes) < 4) and len(cur_subslice.nodes) < len(cur_slice.nodes) :
-        modified_slice = add_to_subslice(cur_subslice, cur_slice, t)
+    if (step or len(cur_subslice.nodes) < min_n_genes) and len(cur_subslice.nodes) < len(cur_slice.nodes) :
+        modified_slice = add_to_subslice(cur_subslice, cur_slice, t, sim_factor, activity_baseline)
     else:
-        modified_slice = remove_from_subslice(cur_subslice, t)
+        modified_slice = remove_from_subslice(cur_subslice, t, sim_factor, activity_baseline)
 
     return modified_slice
 
-def get_edge_weight(edge):
 
-    return  G_modularity.get_edge_data(edge[0],edge[1])["score"]/1000.0
-
-def add_to_subslice(cur_subslice, cur_slice, t):
+def add_to_subslice(cur_subslice, cur_slice, t, sim_factor,activity_baseline):
     cur_slice_minus_cur_subslice=cur_slice.copy()
     cur_slice_minus_cur_subslice.remove_nodes_from(cur_subslice.nodes)
     cross_edges = list(edge_boundary(cur_slice, cur_subslice, cur_slice_minus_cur_subslice))
@@ -187,7 +183,7 @@ def add_to_subslice(cur_subslice, cur_slice, t):
     node_outside_sublice = edge_to_add[0] if edge_to_add[0] not in cur_subslice.nodes else edge_to_add[1]
     # if len([a for a in cur_subslice.nodes if cur_slice.nodes[a]["pertubed_node"]]) ==0:
     #     x=1
-    delta_c = -np.mean(get_edge_weight(edge_to_add)) * SIMILARITY_FACTOR + ACTIVITY_BASELINE + \
+    delta_c = -np.mean(get_edge_weight(edge_to_add)) * sim_factor + activity_baseline + \
               float(cur_slice.nodes[node_outside_sublice]['score'])
     # print(f"delta_c addition: {delta_c}")
     p = None
@@ -208,7 +204,7 @@ def add_to_subslice(cur_subslice, cur_slice, t):
         return cur_subslice.copy()
 
 
-def remove_from_subslice(cur_subslice, t):
+def remove_from_subslice(cur_subslice, t,sim_factor,activity_baseline):
     n_pertubed_nodes=len([a for a in cur_subslice if cur_subslice.nodes[a]["pertubed_node"]])
     leafs = [a for a in cur_subslice if cur_subslice.degree(a) <= 1 and (n_pertubed_nodes>1 or not cur_subslice.nodes[a]["pertubed_node"])]
     if len(leafs)==0:
@@ -217,7 +213,7 @@ def remove_from_subslice(cur_subslice, t):
     # print(cur_subslice.edges(leaf_to_remove))
     edge_to_remove=list(cur_subslice.edges(leaf_to_remove))[0]
     # print(edge_to_remove)
-    delta_c = np.mean(get_edge_weight(edge_to_remove)) * SIMILARITY_FACTOR - ACTIVITY_BASELINE - \
+    delta_c = np.mean(get_edge_weight(edge_to_remove)) * sim_factor - activity_baseline - \
               cur_subslice.nodes[leaf_to_remove]['score']
     # print(f"delta_c removal: {delta_c}")
     p = None
@@ -236,6 +232,13 @@ def remove_from_subslice(cur_subslice, t):
         return cur_subslice.copy()
 
 
+def get_edge_weight(edge):
+    # 1/(1+((G_modularity.get_edge_data(edge[0], edge[1])["score"]-900)*5)/100.0)
+    w=1-(G_modularity.get_edge_data(edge[0], edge[1])["score"]-900)/100.0
+    open("/specific/netapp5/gaga/hagailevi/omics/output/weights/string_weights.txt", 'a+').write(f'{w}\n')
+    return w
+
+
 def retain_relevant_slices(G_original, module_sig_th):
     global G_modularity
 
@@ -246,12 +249,12 @@ def retain_relevant_slices(G_original, module_sig_th):
 
     ccs = [G_modularity.subgraph(c) for c in connected_components(G_modularity)]
     params = []
-    p = multiprocessing.Pool(constants.N_OF_THREADS)
+    # p = multiprocessing.Pool(constants.N_OF_THREADS)
     n_G_original = len(G_original)
     n_pertubed_nodes = len(pertubed_nodes)
-    print(f'n_pertubed_nodes: {n_pertubed_nodes}')
+    # print(f'n_pertubed_nodes: {n_pertubed_nodes}')
     pertubed_nodes_in_ccs = []
-    print(f"number of slices: {len(list(ccs))}")
+    # print(f"number of slices: {len(list(ccs))}")
     for i_cur_cc, cur_cc in enumerate(ccs):
         pertubed_nodes_in_ccs.append(
             len([cur_node for cur_node in cur_cc if G_modularity.nodes[cur_node]["pertubed_node"]]))
@@ -261,9 +264,10 @@ def retain_relevant_slices(G_original, module_sig_th):
     for i_cur_cc, cur_cc in enumerate(ccs):
         params.append([n_G_original, cur_cc, i_cur_cc, n_pertubed_nodes, perturbation_factor])
 
-    res = [a for a in p.map(pf_filter, params) if a is not None]
-    print(f'# of slices after perturbation TH: {len(res)}/{len(params)}')
-    p.close()
+    res = [pf_filter(a) for a in params]
+    res = [a for a in res if a is not None]
+    # print(f'# of slices after perturbation TH: {len(res)}/{len(params)}')
+    # p.close()
     if len(res) == 0:
         return nx.Graph(), [], []
     large_modules, sig_scores = zip(*res)
@@ -294,10 +298,10 @@ def pf_filter(params):
                                 len(cur_cc))
         return (cur_cc, score)
 
-def get_final_modules(G, G_putative_modules):
+def get_final_modules(G, G_putative_modules, module_threshold):
     module_sigs = []
     G_putative_modules=[a for a in G_putative_modules if len(a.nodes) > 4 and len([n for n in a.nodes if G.nodes[n]["pertubed_node"]])>0]
-    print(f"n of putative after filtering by size: {len(G_putative_modules)}")
+    # print(len(G_putative_modules))
     for i_cur_module, cur_G_module in enumerate(G_putative_modules):
         pertubed_nodes_in_cc = [cur_node for cur_node in cur_G_module.nodes if G.nodes[cur_node]["pertubed_node"]]
         pertubed_nodes = [cur_node for cur_node in G.nodes if G.nodes[cur_node]["pertubed_node"]]
@@ -308,36 +312,36 @@ def get_final_modules(G, G_putative_modules):
                                     len(cur_G_module.nodes))
 
         # final_module_threshold =  0.05 / len(G_putative_modules)
-        print(sig_score)
+        # print(sig_score)
         # if sig_score <= final_module_threshold:
         module_sigs.append((cur_G_module, sig_score )) # / len(G_putative_modules)
 
     module_sigs = sorted(module_sigs, key=lambda a: a[1])
 
-    fdr_bh_results = fdrcorrection0([a[1] for a in module_sigs], alpha=0.05, method='indep',
+    fdr_bh_results = fdrcorrection0([a[1] for a in module_sigs], alpha=module_threshold, method='indep',
                                     is_sorted=False)
 
-    return sorted([a[0] for a, b in zip(module_sigs, fdr_bh_results[0]) if b],key=lambda a: -len(a))[:4]
+    return [a[0] for a, b in zip(module_sigs, fdr_bh_results[0]) if b][:10] # sorted(,key=lambda a: -len(a))
 
 
-def main(active_genes_file, network_file, slices_file=None, slice_threshold=0.3, module_threshold=0.05, prize_factor=0,
-         ts=100):
-    print("start running DOMINO...")
+def main(active_genes_file, network_file, slices_file=None, slice_threshold=0.3, module_threshold=0.05,
+         ts=100, min_temp=10, temp_factor=40.0, qval_norm=1.3, min_n_genes=4, sim_factor=2.5, activity_baseline=0):
+    # print("start running bnet_static_string...")
     if os.path.exists(f'{network_file}.pkl') and constants.USE_CACHE:
         G = pickle.load(open(f'{network_file}.pkl', 'rb'))
-        print(f'network\' pkl is loaded: {network_file}.pkl')
+        # print(f'network\' pkl is loaded: {network_file}.pkl')
     else:
-        print(f'generating graph from {network_file}')
+        # print(f'generating graph from {network_file}')
         G = build_network_static(network_file)
         pickle.dump(G, open(f'{network_file}.pkl', 'wb+'))
-        print(f'network\' pkl is saved: {network_file}.pkl')
+        # print(f'network\' pkl is saved: {network_file}.pkl')
 
     # clean subslice from cycles and isolated nodes
     G.remove_edges_from(list(nx.selfloop_edges(G)))
     G.remove_nodes_from(list(nx.isolates(G)))
 
-    print("done building network")
-    scores = extract_scores(active_genes_file)
+    # print("done building network")
+    scores = extract_scores(active_genes_file,qval_norm)
     G = add_scores_to_nodes(G, scores)
 
     modularity_connected_components = read_preprocessed_slices(slices_file)
@@ -349,22 +353,20 @@ def main(active_genes_file, network_file, slices_file=None, slice_threshold=0.3,
                                                                                  os.path.split(slices_file)[1].split(
                                                                                      ".")[0] + ".pkl"))
     G_modularity, relevant_slices, qvals = retain_relevant_slices(G, slice_threshold)
-    print(f'{len(relevant_slices)} relevant slices were retained with threshold {slice_threshold}')
+    # print(f'{len(relevant_slices)} relevant slices were retained with threshold {slice_threshold}')
     params = []
     for i_slice, slice in enumerate(relevant_slices):
-        params.append([G, G.subgraph(slice), i_slice, ts, relevant_slices, prize_factor, module_threshold])
-    p = multiprocessing.Pool(constants.N_OF_THREADS)
-    putative_modules = reduce(lambda a, b: a + b, p.map(sa_for_slice, params), [])
-    p.close()
-    print(f'n of putative modules: {len(putative_modules)}')
-    final_modules = get_final_modules(G, putative_modules)
-    print(f'n of final modules: {len(final_modules)} (n={[len(list(m)) for m in final_modules]})')
+        params.append([G, G.subgraph(slice), i_slice, ts, min_temp, temp_factor, relevant_slices, module_threshold, min_n_genes, sim_factor, activity_baseline])
+    # p = multiprocessing.Pool(constants.N_OF_THREADS)
+    putative_modules = reduce(lambda a, b: a + b, [sa_for_slice(prm) for prm in params], [])
+    # p.close()
+    # print(f'n of putative modules: {len(putative_modules)}')
+    final_modules = get_final_modules(G, putative_modules, module_threshold)
+    print(f'execution with params:\nactive_genes_file={active_genes_file}, network_file={network_file},slices_file={slices_file}, slice_threshold={slice_threshold},module_threshold={module_threshold}\nn of final modules: {len(final_modules)} (n={[len(list(m)) for m in final_modules]})')
     return final_modules
 
 
-if __name__=="__main__":
-    ms=main('/home/gaga/hagailevi/omics/input/active_gene_test.txt', '/home/gaga/hagailevi/omics/input/dip.sif', slices_file='/home/gaga/hagailevi/omics/input/dip_slices.sif.pkl', slice_threshold=0.3, module_threshold=0.05,
-             prize_factor=0,
-             ts=100)
-    print("=================")
-    print([m.nodes for m in ms])
+
+
+
+
