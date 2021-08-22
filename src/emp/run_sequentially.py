@@ -64,7 +64,6 @@ def main():
                         default=constants.config_json["tuning_comb"])
     args = parser.parse_args()
 
-    dataset_files=args.dataset_files
     phenotypes_file=args.phenotypes_file
     algo=args.algo
     network_files=args.network_files
