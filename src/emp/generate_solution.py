@@ -13,6 +13,7 @@ def main():
     parser = argparse.ArgumentParser(description='args')
     parser.add_argument('--dataset_file', dest='dataset_file', help='/path/to/dataset_file', default=constants.config_json["dataset_file"])
     parser.add_argument('--algo', dest='algo', default=constants.config_json["algo"])
+    parser.add_argument('--compare', dest='compare', default=constants.config_json["compare_algo"])
     parser.add_argument('--network_file', dest='network_file', help='/path/to/network_file', default=constants.config_json["network_file"])
     parser.add_argument('--go_folder', dest='go_folder', default=constants.config_json["go_folder"])
     parser.add_argument('--true_solutions_folder', dest='true_solutions_folder', default=constants.config_json["true_solutions_folder"])
@@ -21,28 +22,34 @@ def main():
 
     dataset_file=args.dataset_file
     algo=args.algo
+    compare_algo = args.compare
     network_file = args.network_file
     go_folder = args.go_folder
     true_solutions_folder = args.true_solutions_folder
-    additional_args = args.additional_args
 
     init_state(go_folder)
 
     additional_args_json = json.loads(args.additional_args)
 
+
     params_name = "_".join([str(additional_args_json[a]) for a in \
                                 ["ts", "min_temp", "temp_factor", "slice_threshold", "module_threshold", "sim_factor", "activity_baseline"]])
+
     # read files
     dataset_name=os.path.splitext(os.path.split(dataset_file)[1])[0]
     network_name=os.path.splitext(os.path.split(network_file)[1])[0]
     output_folder=os.path.join(true_solutions_folder, "{}_{}_{}_{}".format(dataset_name,network_name,algo,params_name))
+
+    if compare_algo is not None:
+        compare_folder = os.path.join(true_solutions_folder, "{}_{}_{}_{}".format(dataset_name,network_name,compare_algo,params_name))
+        additional_args_json['compare'] = compare_folder
 
     try:
         os.makedirs(output_folder)
     except FileExistsError:
         pass
 
-    run_algo(dataset_file, algo, network_file, go_folder, os.path.join(output_folder) , **json.loads(additional_args))
+    run_algo(dataset_file, algo, network_file, go_folder, os.path.join(output_folder) , **additional_args_json)
 
 
 if __name__ == "__main__":
