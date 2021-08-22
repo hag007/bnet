@@ -21,6 +21,7 @@ current_path = os.path.dirname(os.path.realpath(__file__))
 def main():
     parser = argparse.ArgumentParser(description='args')
     parser.add_argument('--dataset_files', dest='dataset_files', default=constants.config_json["dataset_files"])
+    parser.add_argument('--phenotypes_file', dest='phenotypes_file', default=constants.config_json["phenotypes_file"])
     parser.add_argument('--algo', dest='algo', default=constants.config_json["algo"])
     parser.add_argument('--network_file', dest='network_file', default=constants.config_json["network_file"])
     parser.add_argument('--go_folder', dest='go_folder', default=constants.config_json["go_folder"])
@@ -28,6 +29,7 @@ def main():
                         default=constants.config_json["true_solutions_folder"])
     parser.add_argument('--metrics_folder', dest='metrics_folder', default=constants.config_json["metrics_folder"])
     parser.add_argument('--pf', dest='pf', help="parallelization factor", default=constants.config_json["pf"])
+    parser.add_argument('--network_files', dest='network_files', help="network_files", default=constants.config_json["network_files"])
     parser.add_argument('--additional_args', help="additional_args", dest='additional_args',
                         default=constants.config_json["additional_args"])
     parser.add_argument('--processes', dest="processes", help='generate_solution,calc_pcs,calc_prediction',
@@ -36,16 +38,23 @@ def main():
                         default=constants.config_json["tuning_comb"])
     args = parser.parse_args()
     dataset_files = args.dataset_files
+    phenotypes_file = args.phenotypes_file
     algo = args.algo
     true_solutions_folder = args.true_solutions_folder
     tuning_comb_args = args.tuning_comb
     metrics_folder = args.metrics_folder
+    network_files = args.network_files
 
     tuning_comb = json.loads(str(tuning_comb_args))
     combs = list(itertools.product(*tuning_comb.values()))
-    p = Pool(30)
+    p = Pool(5)
     params = []
     combs_str = f"report_{algo}"
+
+    phenotypes_df = pd.read_csv(phenotypes_file)
+
+    dataset_files=phenotypes_df.loc[:,"path to genes"]
+
     for dataset_file in dataset_files:
         dataset_name = os.path.splitext(os.path.split(dataset_file)[1])[0]
         combs_str += "_" + dataset_name
@@ -63,15 +72,16 @@ def main():
 
     df = pd.DataFrame()
     for result in results:
-        df = df.append(result)
+        df = pd.concat([df, result])
 
     if not os.path.isdir(metrics_folder):
         os.makedirs(metrics_folder)
     fname = os.path.join(metrics_folder, f"{combs_str}.csv")
-    df.to_csv(fname)
+    df.to_csv(fname, sep='\t')
 
 
 def fetch_metrics(args):
+
     dataset_name, network_name, algo, true_solutions_folder, comb, tuning_comb = args
     tuning_args = {k: v for k, v in zip(tuning_comb.keys(), comb)}
     params_name = "_".join([str(tuning_args[a]) for a in \
@@ -80,7 +90,7 @@ def fetch_metrics(args):
 
     result_folder = os.path.join(true_solutions_folder, "{}_{}_{}_{}".format(dataset_name, network_name, algo, params_name))
     report_file = os.path.join(result_folder, "report.tsv")
-    df = pd.read_csv(report_file,index_col=0)
+    df = pd.read_csv(report_file, sep='\t', index_col=0)
     return df
 
 
