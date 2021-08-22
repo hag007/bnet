@@ -5,11 +5,7 @@
   "phenotype_file": "/specific/netapp5/gaga/hagailevi/omics/GDC-TCGA/BRCA/tcga_data/clinicalMatrix",
   "dataset_file_1" : "/specific/netapp5/gaga/hagailevi/omics/input/t2d.tsv",
   "dataset_files" : ["/specific/netapp5/gaga/hagailevi/omics/input/active_nodes_test.txt","/specific/netapp5/gaga/hagailevi/omics/input/active_nodes_test_1.txt"],
-<<<<<<< HEAD
   "dataset_file" : "/specific/netapp5/gaga/hagailevi/omics/input/bnet_skcm_retrospective.tsv",
-=======
-  "dataset_file" : "/specific/netapp5/gaga/hagailevi/omics/input/bnet_brca_menopause.tsv",
->>>>>>> david
   "gene_id_file": "/specific/netapp5/gaga/hagailevi/omics/list/protein_coding.txt",
   "gene_id_file_1": "/specific/netapp5/gaga/hagailevi/omics/input/active_nodes_lum_top_2000.txt",
   "phenotype_index": "submitter_id.samples",

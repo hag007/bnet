@@ -27,11 +27,12 @@ def main():
     network_file = args.network_file
     go_folder = args.go_folder
     true_solutions_folder = args.true_solutions_folder
+    additional_args = args.additional_args
 
-    generate_solution(dataset_file, algo, go_folder, network_file, true_solutions_folder, additional_args)
+    generate_solution(dataset_file, algo, go_folder, network_file, true_solutions_folder, compare_algo, additional_args)
 
 
-def generate_solution(dataset_file, algo, go_folder, network_file, true_solutions_folder, additional_args):
+def generate_solution(dataset_file, algo, go_folder, network_file, true_solutions_folder, compare_algo, additional_args):
 
     print(f'start ({(dataset_file, algo, go_folder, network_file, true_solutions_folder ,additional_args)})')
     # init_state(go_folder)
