@@ -12,6 +12,9 @@ from src.runners.jactivemodules_sa_runner import jAMSARunner
 from src.runners.bionet_runner import BionetRunner
 from src.runners.keypathwayminer_ines_greedy_runner import KPMRunner
 from src.runners.hotnet2_runner import Hotnet2Runner
+from src.runners.TopSDGGenesRunner import TopSDGGenesRunner
+from src.runners.TopSDGPcsRunner import TopSDGPcsRunner
+
 
 ALGO_BY_NAMES = {"netbox": NetboxRunner(), "jactivemodules_greedy": jAMGreedyRunner(),
                  "jactivemodules_greedy_string": jAMGreedyRunner(), "jactivemodules_sa": jAMSARunner(),
@@ -20,7 +23,7 @@ ALGO_BY_NAMES = {"netbox": NetboxRunner(), "jactivemodules_greedy": jAMGreedyRun
                  'BNET_dynamic_Cosine': BnetRunner('Cosine'), 'BNET_dynamic_Dice': BnetRunner('Dice'), 'BNET_dynamic_Jaccard': BnetRunner('Jaccard'),
                  'BNET_dynamic_Lin': BnetRunner('Lin'), 'BNET_dynamic_Jiang-Conrath': BnetRunner('Jiang-Conrath'),
                  'BNET_dynamic_SimGIC': BnetRunner('SimGIC'), 'BNET_dynamic_SimRel': BnetRunner('SimRel'), 'BNET_dynamic_SimUI': BnetRunner('SimUI'),
-                 'top_SDG_genes': TopSDGGenesRunner('top_SDG_genes'), 'top_SDG_pcs': TopSDGPcsRunner('top_SDG_pcs'), 'DOMINO': BnetRunner('DOMINO')} #
+                 'top_SDG_genes': TopSDGGenesRunner(),  'top_SDG_pcs': TopSDGPcsRunner(), 'DOMINO': BnetRunner('DOMINO')} #
 
 
 
