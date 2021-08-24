@@ -42,59 +42,23 @@ class TopSDGGenesRunner(AbstractRunner):
 
 
     def run(self, dataset_file_name, network_file_name, output_folder, **kwargs):
-        print("run bnet_dynamic runner...")
+        print("run top_sdg_genes runner...")
         slices_file = kwargs['slices_file']
         constants.N_OF_THREADS=1
         if 'n_of_threads' in kwargs:
             constants.N_OF_THREADS=kwargs['n_of_threads']
         constants.USE_CACHE=False
+
         if 'use_cache' in kwargs:
             constants.USE_CACHE=kwargs['use_cache']=='true'
-        slice_threshold = 0.3
-        if 'slice_threshold' in kwargs:
-            slice_threshold = kwargs['slice_threshold']
-        module_threshold = 0.05
-        if 'module_threshold' in kwargs:
-            module_threshold = kwargs['module_threshold']
-        algo = "BNET_STATIC_STRING"
-        if 'algo' in kwargs:
-            algo = kwargs['algo']
-        true_solutions_folder = "/home/gaga/hagailevi/omics/output/true_solutions"
-        if 'true_solutions_folder' in kwargs:
-            true_solutions_folder = kwargs['true_solutions_folder']
-        ts = 100
-        if 'ts' in kwargs:
-            ts = kwargs['ts']
-        min_temp = 10
-        if 'min_temp' in kwargs:
-            min_temp = kwargs['min_temp']
-        temp_factor = 40.0
-        if 'temp_factor' in kwargs:
-            temp_factor = kwargs['temp_factor']
-        qval_norm = 1.3
-        if 'qval_norm' in kwargs:
-            qval_norm = kwargs['qval_norm']
-        min_n_genes = 4
-        if 'min_n_genes' in kwargs:
-            min_n_genes = kwargs['min_n_genes']
-        sim_factor = 2.5
-        if 'sim_factor' in kwargs:
-            sim_factor = kwargs['sim_factor']
-        activity_baseline = 0
-        if 'activity_baseline' in kwargs:
-            activity_baseline = kwargs['activity_baseline']
+
+        if 'compare_algo' in kwargs:
+            compare_folder = kwargs['compare_algo']
 
 
         active_genes_file, bg_genes = self.init_params(dataset_file_name, network_file_name, output_folder)
         # print(f'domino_parameters: active_genes_file={active_genes_file}, network_file={network_file_name},slices_file={slices_file}, slice_threshold={slice_threshold},module_threshold={module_threshold}')
-        modules = top_sdg_main(dataset_file=dataset_file_name, network_file=network_file_name,
-                            slice_threshold=slice_threshold, module_threshold=module_threshold, algo=algo,
-                               true_solutions_folder=true_solutions_folder, ts=ts, min_temp=min_temp, temp_factor=temp_factor,
-                             sim_factor=sim_factor, activity_baseline=activity_baseline)
-        # modules = bnet_main(active_genes_file=dataset_file_name, network_file=network_file_name,
-        #                     slices_file=slices_file, slice_threshold=slice_threshold,
-        #                     module_threshold=module_threshold)
-        # modules = list(filter(lambda x: len(x) > 3, modules))
+        modules = top_sdg_main(dataset_file=dataset_file_name, compare_folder=compare_folder)
         all_bg_genes = [bg_genes for x in modules]
         return modules, all_bg_genes
 

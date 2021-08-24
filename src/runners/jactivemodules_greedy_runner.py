@@ -44,7 +44,7 @@ class jAMGreedyRunner(AbstractRunner):
 
     def run(self, dataset_file_name, network_file_name, output_folder, **kwargs):
         print("start running jactivemodules_greedy")
-        compare_folder = kwargs["compare"]
+        compare_folder = kwargs["compare_algo"]
         results_file_name, bg_genes, num_of_modules = self.init_params(network_file_name, output_folder,compare_folder)
         script_file_name = format_script(os.path.join(constants.dir_path, "src/sh", "run_{}.sh".format(self.ALGO_NAME)),
                                          ALGO_DIR=self.ALGO_DIR, NETWORK_FILE_NAME=network_file_name,
