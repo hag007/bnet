@@ -50,28 +50,29 @@ def main():
     tuning_comb = json.loads(str(tuning_comb_args))
     combs = list(itertools.product(*tuning_comb.values()))
 
-    fields=["N features", "RF accuracy", "RF AUPR", "RF AUROC", "Null RF AUPR", "Null RF AUROC", "SVM accuracy","SVM AUPR","SVM AUROC","Null SVM AUPR","Null SVM AUROC","SVM AUPR diff","SVM AUROC diff", "number of datasets"]
-    df_algos_mean=pd.DataFrame(columns=fields)
+    df_algos_mean=pd.DataFrame(columns=["N features", "RF accuracy","SVM accuracy","SVM AUPR","SVM AUROC","Null AUPR","Null AUROC","SVM AUPR diff","SVM AUROC diff", "number of datasets"])
     df_algos_median = pd.DataFrame(
-        columns=fields)
+        columns=["N features", "RF accuracy", "SVM accuracy", "SVM AUPR", "SVM AUROC", "Null AUPR", "Null AUROC",
+                 "SVM AUPR diff", "SVM AUROC diff", "number of datasets"])
     df_algos_max = pd.DataFrame(
-        columns=fields)
+        columns=["N features", "RF accuracy", "SVM accuracy", "SVM AUPR", "SVM AUROC", "Null AUPR", "Null AUROC",
+                 "SVM AUPR diff", "SVM AUROC diff", "number of datasets"])
     df_algo_max_comb = pd.DataFrame()
-    df_ranking= pd.DataFrame()
     for algo in algos:
 
         # p = Pool(5)
         params = []
         combs_str = f"report_{algo}"
 
-        phenotypes_df = pd.read_csv(phenotypes_file, sep='\t')
+        phenotypes_df = pd.read_csv(phenotypes_file)
 
         dataset_files=phenotypes_df.loc[:,"path to genes"]
 
-        df_means=pd.DataFrame(columns=fields)
+        df_means=pd.DataFrame(columns=["N features", "RF accuracy","SVM accuracy","SVM AUPR","SVM AUROC","Null AUPR","Null AUROC","SVM AUPR diff","SVM AUROC diff", "number of datasets"])
         df_median = pd.DataFrame(
-            columns=fields)
-        df_max = pd.DataFrame(columns=fields)
+            columns=["N features", "RF accuracy", "SVM accuracy", "SVM AUPR", "SVM AUROC", "Null AUPR", "Null AUROC",
+                     "SVM AUPR diff", "SVM AUROC diff", "number of datasets"])
+        df_max = pd.DataFrame(columns=["N features", "RF accuracy", "SVM accuracy", "SVM AUPR", "SVM AUROC", "Null AUPR", "Null AUROC", "SVM AUPR diff", "SVM AUROC diff", "number of datasets"])
         for comb in combs:
 
             cur_tuning_json = {k: v for k, v in zip(tuning_comb.keys(), comb)}
@@ -114,10 +115,8 @@ def main():
                 df_median=pd.DataFrame(index=[], data=[df.dropna(axis=0).median(axis=0)])
             else:
                 if not df.empty:
-                    df.loc[:, "RF AUPR diff"] = df.loc[:, "RF AUPR"] - df.loc[:, "Null RF AUPR"]
-                    df.loc[:, "RF AUROC diff"] = df.loc[:, "RF AUROC"] - df.loc[:, "Null RF AUROC"]
-                    df.loc[:, "SVM AUPR diff"] = df.loc[:, "SVM AUPR"] - df.loc[:, "Null SVM AUPR"]
-                    df.loc[:, "SVM AUROC diff"] = df.loc[:, "SVM AUROC"] - df.loc[:, "Null SVM AUROC"]
+                    df.loc[:, "SVM AUPR diff"] = df.loc[:, "SVM AUPR"] - df.loc[:, "Null AUPR"]
+                    df.loc[:, "SVM AUROC diff"] = df.loc[:, "SVM AUROC"] - df.loc[:, "Null AUROC"]
                 df_means.loc[cur_index]=df.dropna(axis=0).mean(axis=0)
                 df_means.loc[cur_index, "number of datasets"] = df.dropna(axis=0).shape[0]
                 df_median.loc[cur_index] = df.dropna(axis=0).mean(axis=0)
@@ -143,13 +142,10 @@ def main():
         df_algos_median.loc[algo] = df_means.mean(axis=0)
         df_algos_median.loc[algo, "number of combinations"] = df_means.shape[0]
         df_algos_max.loc[algo] = df_means.max(axis=0)
-        cur_algo_ranking=df_means.loc[:,["RF accuracy", "RF AUPR", "RF AUROC", "SVM accuracy","SVM AUPR","SVM AUROC"]].rank(axis=0).applymap(lambda a: int(a >= df_means.shape[0])).sum(axis=1)
-        df_ranking=pd.concat([df_ranking, cur_algo_ranking.to_frame().rename(columns={0:algo})], axis=1)
-
         df_algos_max.loc[algo, "number of combinations"] = df_means.shape[0]
 
         df_max_comb=pd.isnull(df_means[df_means == df_means.max(axis=0)]).applymap(lambda a: not a)
-        df_max_comb=df_max_comb.drop(columns=['N features', 'Null RF AUROC', 'Null RF AUPR', 'Null SVM AUROC', 'Null SVM AUPR', 'number of datasets'])
+        df_max_comb=df_max_comb.drop(columns=['Null AUROC', 'Null AUPR', 'number of datasets'])
         df_max_comb=df_max_comb[df_max_comb.apply(lambda a: any(a), axis=1)]
         df_max_comb=df_max_comb.apply(lambda a: list(df_max_comb.index[a]))
         if not df_max_comb.empty:
@@ -164,8 +160,6 @@ def main():
     df_algos_max.to_csv(fname, sep='\t')
     fname = os.path.join(metrics_folder, f"agg_report_{network_name}_{'_'.join(algos)}_arg_max.tsv")  # combs_str
     df_algo_max_comb.to_csv(fname, sep='\t')
-    fname = os.path.join(metrics_folder, f"agg_report_{network_name}_{'_'.join(algos)}_ranking.tsv")  # combs_str
-    df_ranking.to_csv(fname, sep='\t')
 
 
 
@@ -174,7 +168,7 @@ def fetch_metrics(args):
     dataset_name, network_name, algo, true_solutions_folder, tuning_args = args
 
     params_name = "_".join([str(tuning_args[a]) for a in \
-                            ["ts", "min_temp", "temp_factor", "slice_threshold", "module_threshold", "sim_factor",\
+                            ["ts", "min_temp", "temp_factor", "slice_threshold", "module_threshold", "sim_factor",
                              "activity_baseline"]])
 
     result_folder = os.path.join(true_solutions_folder, "{}_{}_{}_{}".format(dataset_name, network_name, algo, params_name))

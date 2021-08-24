@@ -74,7 +74,7 @@ def main():
     tuning_comb_args = args.tuning_comb
     processes = args.processes.split(",")
 
-    phenotypes_df = pd.read_csv(phenotypes_file)
+    phenotypes_df = pd.read_csv(phenotypes_file, sep='\t')
 
     algo_param="{}".format(algo)
     true_solutions_folder_param = "{}".format(true_solutions_folder)

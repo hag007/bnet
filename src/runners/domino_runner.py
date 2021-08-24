@@ -8,7 +8,7 @@ from src import constants
 from src.implementations.domino import main as domino_main
 from src.utils.ensembl2entrez import ensembl2entrez_convertor
 from src.utils.network import get_network_genes
-
+from src.utils.modules import get_num_modules
 from src.runners.abstract_runner import AbstractRunner
 class DominoRunner(AbstractRunner):
     def __init__(self):
@@ -28,15 +28,14 @@ class DominoRunner(AbstractRunner):
         print("extracted {} modules".format(len(modules)))
         return modules, all_bg_genes
 
-    def init_params(self, dataset_file_name, network_file_name, output_folder):
-
-
+    def init_params(self, dataset_file_name, network_file_name, compare_folder, output_folder):
+        num_modules = get_num_modules(compare_folder)
         df_scores=pd.read_csv(dataset_file_name, sep='\t', index_col=0)
         sig_genes=df_scores['qval'][df_scores['qval']<0.05].index
         active_genes_file=os.path.join(output_folder, "active_genes_file.txt")
         open(active_genes_file, "w+").write("\n".join([x for x in sig_genes if len(ensembl2entrez_convertor([x]))>0 ]))
         bg_genes=get_network_genes(network_file_name)
-        return active_genes_file, bg_genes
+        return active_genes_file, bg_genes, num_modules
 
 
     def run(self, dataset_file_name, network_file_name, output_folder, **kwargs):
@@ -54,12 +53,16 @@ class DominoRunner(AbstractRunner):
         module_threshold = 0.05
         if 'module_threshold' in kwargs:
             module_threshold = kwargs['module_threshold']
-        active_genes_file, bg_genes = self.init_params(dataset_file_name, network_file_name, output_folder)
+        if 'compare_folder' in kwargs:
+            compare_folder = kwargs['compare_folder']
+        active_genes_file, bg_genes, num_modules = self.init_params(dataset_file_name, network_file_name, compare_folder, output_folder)
         print(f'domino_parameters: active_genes_file={active_genes_file}, network_file={network_file_name},slices_file={slices_file}, slice_threshold={slice_threshold},module_threshold={module_threshold}')
         modules = domino_main(active_genes_file=active_genes_file, network_file=network_file_name,
                               slices_file=slices_file, slice_threshold=slice_threshold,
                               module_threshold=module_threshold)
-        modules = list(filter(lambda x: len(x) > 3, modules))
+
+        modules =  list(filter(lambda x: len(x[0]) > 3, modules))
+        modules=modules[:num_modules]
         all_bg_genes = [bg_genes for x in modules]
         return modules, all_bg_genes
 

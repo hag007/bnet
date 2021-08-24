@@ -36,8 +36,8 @@ def main():
     algo=args.algo
     network_file = args.network_file
     true_solutions_folder = args.true_solutions_folder
-    phenotype_args = json.loads(args.phenotype_args)
-    additional_args = json.loads(args.additional_args)
+    phenotype_args = args.phenotype_args # json.loads(args.phenotype_args)
+    additional_args = args.additional_args # json.loads(args.additional_args)
 
     calc_prediction(dataset_file, algo, network_file, true_solutions_folder, additional_args, phenotype_args)
 
@@ -65,7 +65,7 @@ def calc_prediction(dataset_file, algo, network_file, true_solutions_folder, add
     if pcs_data.shape[0]==0:
         with open(output_file, 'w') as o:
             print(f'conf: {additional_args}\n{output_file}:\n no PCS here...', 'r')
-            o.write("\t".join(["name", "N features", "RF accuracy","SVM accuracy","SVM AUPR","SVM AUROC","Null AUPR","Null AUROC"])+"\n")
+            o.write("\t".join(["name", "N features", "RF accuracy", "RF AUPR", "RF AUROC", "Null RF AUPR", "Null RF AUROC", "SVM accuracy", "SVM AUPR", "SVM AUROC", "Null SVM AUPR", "Null SVM AUROC"])+"\n")
             o.write("\t".join([unique_folder_name, "0", "0", "0", "0", "0", "0", "0"]))
             return
 
@@ -87,10 +87,15 @@ def calc_prediction(dataset_file, algo, network_file, true_solutions_folder, add
     # prepare structures
     prediction_accuracies_rf=[]
     prediction_accuracies_svm = []
-    pr_aucs=[]
-    roc_aucs=[]
-    pr_aucs_nulls=[]
-    roc_aucs_nulls=[]
+    svm_pr_aucs=[]
+    svm_roc_aucs=[]
+    svm_pr_aucs_nulls=[]
+    svm_roc_aucs_nulls=[]
+
+    rf_pr_aucs = []
+    rf_roc_aucs = []
+    rf_pr_aucs_nulls = []
+    rf_roc_aucs_nulls = []
 
     # calc prediction n_iterations times
 
@@ -103,6 +108,15 @@ def calc_prediction(dataset_file, algo, network_file, true_solutions_folder, add
         clf = RandomForestClassifier(max_depth=2, random_state=0)
         clf.fit(X_train, y_train)
         y_pred=clf.predict(X_test)
+        probabilities = clf.predict_proba(X_test)
+        probabilities=[a[1] for a in  probabilities]
+        rf_pr_aucs.append(average_precision_score(y_test, probabilities))
+        rf_roc_aucs.append(roc_auc_score(y_test, probabilities))
+
+        # calc "null" metrics
+        rf_pr_aucs_nulls.append(average_precision_score(y_test, [1 for a in y_test]))
+        rf_roc_aucs_nulls.append(roc_auc_score(y_test, [1 for a in y_test]))
+
         prediction_accuracies_rf.append(float(np.sum([a==b for a,b in zip(y_test, y_pred)]))/len(y_test))  # roc_auc_score(labels_test, probabilities))
 
         # run SVM
@@ -117,12 +131,12 @@ def calc_prediction(dataset_file, algo, network_file, true_solutions_folder, add
         probabilities = clf_method.decision_function(X_test)
         # probabilities = [cur[predicted_results[i]] for i, cur in enumerate(clf_method.predict_proba(X_test))] // RAnking alternative. Has some issues...
         precision, recall, _ = precision_recall_curve(y_test, probabilities)
-        pr_aucs.append(average_precision_score(y_test, probabilities))
-        roc_aucs.append(roc_auc_score(y_test, probabilities))
+        svm_pr_aucs.append(average_precision_score(y_test, probabilities))
+        svm_roc_aucs.append(roc_auc_score(y_test, probabilities))
 
         # calc "null" metrics
-        pr_aucs_nulls.append(average_precision_score(y_test, [1 for a in y_test]))
-        roc_aucs_nulls.append(roc_auc_score(y_test, [1 for a in y_test]))
+        svm_pr_aucs_nulls.append(average_precision_score(y_test, [1 for a in y_test]))
+        svm_roc_aucs_nulls.append(roc_auc_score(y_test, [1 for a in y_test]))
 
         prediction_accuracies_svm.append(float(np.sum([a == b for a, b in zip(y_test, predicted_results)])) / len(
             y_test))  # roc_auc_score(labels_test, probabilities))
@@ -130,14 +144,15 @@ def calc_prediction(dataset_file, algo, network_file, true_solutions_folder, add
     # print averaged metrics
     # print(f'RF accuracy: {np.mean(prediction_accuracies_rf)}')
     # print(f'SVM accuracy: {np.mean(prediction_accuracies_svm)}')
-    # print(f'SVM average AUPR: {np.mean(pr_aucs)} (AUPR null (all labels are 1): {np.mean(pr_aucs_nulls)})')
-    # print(f'SVM average AUROC: {np.mean(roc_aucs)} (null score (all labels are 1) is : {np.mean(roc_aucs_nulls)})')
+    # print(f'SVM average AUPR: {np.mean(svm_pr_aucs)} (AUPR null (all labels are 1): {np.mean(svm_pr_aucs_nulls)})')
+    # print(f'SVM average AUROC: {np.mean(svm_roc_aucs)} (null score (all labels are 1) is : {np.mean(svm_roc_aucs_nulls)})')
 
 
     with open(output_file, 'w') as o:
-        metrics = [prediction_accuracies_rf, prediction_accuracies_svm, pr_aucs, roc_aucs, pr_aucs_nulls,
-                   roc_aucs_nulls]
-        o.write("\t".join(["name", "N features", "RF accuracy", "SVM accuracy", "SVM AUPR", "SVM AUROC", "Null AUPR", "Null AUROC"]) + "\n")
+        metrics = [prediction_accuracies_rf, rf_pr_aucs, rf_roc_aucs, rf_pr_aucs_nulls,
+                   rf_roc_aucs_nulls, prediction_accuracies_svm, svm_pr_aucs, svm_roc_aucs, svm_pr_aucs_nulls,
+                   svm_roc_aucs_nulls]
+        o.write("\t".join(["name", "N features", "RF accuracy", "RF AUPR", "RF AUROC", "Null RF AUPR", "Null RF AUROC", "SVM accuracy", "SVM AUPR", "SVM AUROC", "Null SVM AUPR", "Null SVM AUROC"]) + "\n")
         o.write("\t".join([unique_folder_name, str(pcs_data.shape[1])] + [str(round(np.mean(m), 4)) for m in metrics]))
 
     with open(output_file, 'r') as r:
