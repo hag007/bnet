@@ -78,8 +78,8 @@ class TopSDGPcsRunner(AbstractRunner):
         if 'activity_baseline' in kwargs:
             activity_baseline = kwargs['activity_baseline']
 
-        if 'compare_algo' in kwargs:
-            compare_folder = kwargs['compare_algo']
+        if 'compare_folder' in kwargs:
+            compare_folder = kwargs['compare_folder']
 
         top_sdg_pcs_main(dataset_file=dataset_file_name,true_solutions_folder=true_solutions_folder,
                          compare_folder=compare_folder,

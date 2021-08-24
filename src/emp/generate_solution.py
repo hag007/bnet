@@ -49,18 +49,13 @@ def generate_solution(dataset_file, algo, go_folder, network_file, true_solution
     output_folder = os.path.join(true_solutions_folder,
                                  "{}_{}_{}_{}".format(dataset_name, network_name, algo, params_name))
     if compare_algo is not None:
-<<<<<<< HEAD
-        compare_args_json = json.loads(compare_args)
-        compare_params_name = "_".join([str(compare_args_json[a]) for a in \
-                                        ["ts", "min_temp", "temp_factor", "slice_threshold", "module_threshold",
-                                         "sim_factor",
-                                         "activity_baseline"]])
-        compare_folder = os.path.join(true_solutions_folder, "{}_{}_{}_{}".format(dataset_name,network_name,compare_algo,compare_params_name))
-        additional_args_json['compare_folder'] = compare_folder
-=======
+        # compare_args_json = json.loads(compare_args)
+        # compare_params_name = "_".join([str(compare_args_json[a]) for a in \
+        #                                 ["ts", "min_temp", "temp_factor", "slice_threshold", "module_threshold",
+        #                                  "sim_factor",
+        #                                  "activity_baseline"]])
         compare_folder = os.path.join(true_solutions_folder, "{}_{}_{}_{}".format(dataset_name,network_name,compare_algo,params_name))
-        additional_args_json['compare_algo'] = compare_folder
->>>>>>> eran
+        additional_args_json['compare_folder'] = compare_folder
 
     try:
         os.makedirs(output_folder)
@@ -68,9 +63,6 @@ def generate_solution(dataset_file, algo, go_folder, network_file, true_solution
         pass
     run_algo(dataset_file, algo, network_file, go_folder, os.path.join(output_folder) , **additional_args_json)
 
-<<<<<<< HEAD
 if __name__=='__main__':
     main()
-=======
 
->>>>>>> eran

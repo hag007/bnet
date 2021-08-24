@@ -52,8 +52,8 @@ class TopSDGGenesRunner(AbstractRunner):
         if 'use_cache' in kwargs:
             constants.USE_CACHE=kwargs['use_cache']=='true'
 
-        if 'compare_algo' in kwargs:
-            compare_folder = kwargs['compare_algo']
+        if 'compare_folder' in kwargs:
+            compare_folder = kwargs['compare_folder']
 
 
         active_genes_file, bg_genes = self.init_params(dataset_file_name, network_file_name, output_folder)
