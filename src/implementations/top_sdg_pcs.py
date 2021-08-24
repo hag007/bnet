@@ -16,7 +16,8 @@ def calc_pca(X, n_components=1):
     # X=np.mean(X.values, axis=1).transpose()
     return X
 
-def main(dataset_file, algo, network_file, true_solutions_folder, ts, min_temp, temp_factor, slice_threshold,
+def main(dataset_file, true_solutions_folder, compare_folder,
+         algo, network_file, ts, min_temp, temp_factor, slice_threshold,
          module_threshold, sim_factor, activity_baseline):
 
     additional_args = [ts, min_temp, temp_factor, slice_threshold, module_threshold, sim_factor,
@@ -25,15 +26,12 @@ def main(dataset_file, algo, network_file, true_solutions_folder, ts, min_temp, 
     params_name = "_".join([str(a) for a in additional_args])
     dataset_name = os.path.splitext(os.path.split(dataset_file)[1])[0]
     network_name = os.path.splitext(os.path.split(network_file)[1])[0]
-    orig_true_solutions = "/home/gaga/hagailevi/omics/output/true_solutions"
-    orig_output_folder = os.path.join(orig_true_solutions,
-                                 "{}_{}_{}_{}/modules".format(dataset_name, network_name, algo, params_name))
-    orig_output_file = os.path.join(orig_output_folder, "modules_summary.tsv")
-
     output_folder = os.path.join(true_solutions_folder,
-                                 "{}_{}_{}_{}/modules".format(dataset_name, network_name, algo, params_name))
+                                 "{}_{}_{}_{}".format(dataset_name, network_name, algo, params_name))
+    input_folder = os.path.join(compare_folder, "modules")
+    input_file = os.path.join(input_folder, "modules_summary.tsv")
 
-    modules = pd.read_csv(orig_output_file, sep='\t')
+    modules = pd.read_csv(input_file, sep='\t')
     num_modules = len(modules)
     num_of_genes = sum(modules['#_genes'])
     active_genes = pd.read_csv(dataset_file, sep='\t')[:num_of_genes].transpose()
@@ -54,6 +52,6 @@ def main(dataset_file, algo, network_file, true_solutions_folder, ts, min_temp, 
     ge_relevant = ge[active_genes]
     pca = calc_pca(ge_relevant, num_modules)
     output_file = os.path.join(output_folder, "pcs.tsv")
-    pd.DataFrame(pca).to_csv(output_file, sep='\t', index=False)
+    pd.DataFrame(pca, index=ge_relevant.index).to_csv(output_file, sep='\t', index_label="submitter_id.samples")
     os.chmod(output_file, 0o777)
 

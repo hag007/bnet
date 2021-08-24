@@ -42,8 +42,8 @@ class TopSDGPcsRunner(AbstractRunner):
 
 
     def run(self, dataset_file_name, network_file_name, output_folder, **kwargs):
-        print("run bnet_dynamic runner...")
-        slices_file = kwargs['slices_file']
+        print("run top_sdg_pcs runner...")
+        # slices_file = kwargs['slices_file']
         constants.N_OF_THREADS=1
         if 'n_of_threads' in kwargs:
             constants.N_OF_THREADS=kwargs['n_of_threads']
@@ -56,7 +56,7 @@ class TopSDGPcsRunner(AbstractRunner):
         module_threshold = 0.05
         if 'module_threshold' in kwargs:
             module_threshold = kwargs['module_threshold']
-        algo = "BNET_STATIC_STRING"
+        algo = "top_SDG_pcs"
         if 'algo' in kwargs:
             algo = kwargs['algo']
         true_solutions_folder = constants.config_json['true_solutions_folder']
@@ -71,12 +71,6 @@ class TopSDGPcsRunner(AbstractRunner):
         temp_factor = 40.0
         if 'temp_factor' in kwargs:
             temp_factor = kwargs['temp_factor']
-        qval_norm = 1.3
-        if 'qval_norm' in kwargs:
-            qval_norm = kwargs['qval_norm']
-        min_n_genes = 4
-        if 'min_n_genes' in kwargs:
-            min_n_genes = kwargs['min_n_genes']
         sim_factor = 2.5
         if 'sim_factor' in kwargs:
             sim_factor = kwargs['sim_factor']
@@ -84,9 +78,13 @@ class TopSDGPcsRunner(AbstractRunner):
         if 'activity_baseline' in kwargs:
             activity_baseline = kwargs['activity_baseline']
 
-        top_sdg_pcs_main(dataset_file=dataset_file_name, network_file=network_file_name,
-                            slice_threshold=slice_threshold, module_threshold=module_threshold, algo=algo,
-                               true_solutions_folder=true_solutions_folder, ts=ts, min_temp=min_temp, temp_factor=temp_factor,
+        if 'compare_algo' in kwargs:
+            compare_folder = kwargs['compare_algo']
+
+        top_sdg_pcs_main(dataset_file=dataset_file_name,true_solutions_folder=true_solutions_folder,
+                         compare_folder=compare_folder,
+                             network_file=network_file_name, slice_threshold=slice_threshold, module_threshold=module_threshold, algo=algo,
+                            ts=ts, min_temp=min_temp, temp_factor=temp_factor,
                              sim_factor=sim_factor, activity_baseline=activity_baseline)
         return None, None
 

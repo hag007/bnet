@@ -83,7 +83,7 @@ def calc_pcs(dataset_file, algo, network_file, true_solutions_folder, additional
             cur_file_index = os.path.splitext(cur_file)[0].split('_')[-1]
 
             # reads gene identifiers
-            module_genes=pd.read_csv(os.path.join(path_to_modules,cur_file),index_col=0).index.values
+            module_genes=pd.read_csv(os.path.join(path_to_modules,cur_file), header=None, index_col=0).index.values
 
             # concatenates PCs of different modules: a SINGLE PC per module
             df_features=pd.concat([df_features,pd.DataFrame(index=ge.index,data=calc_pca(ge.reindex(module_genes, axis=1).dropna(axis=1),n_components=n_components),columns=[cur_file_index])], axis=1)
