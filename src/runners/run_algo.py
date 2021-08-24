@@ -20,7 +20,7 @@ ALGO_BY_NAMES = {"netbox": NetboxRunner(), "jactivemodules_greedy": jAMGreedyRun
                  'BNET_dynamic_Cosine': BnetRunner('Cosine'), 'BNET_dynamic_Dice': BnetRunner('Dice'), 'BNET_dynamic_Jaccard': BnetRunner('Jaccard'),
                  'BNET_dynamic_Lin': BnetRunner('Lin'), 'BNET_dynamic_Jiang-Conrath': BnetRunner('Jiang-Conrath'),
                  'BNET_dynamic_SimGIC': BnetRunner('SimGIC'), 'BNET_dynamic_SimRel': BnetRunner('SimRel'), 'BNET_dynamic_SimUI': BnetRunner('SimUI'),
-                 'top_SDG_genes': TopSDGGenesRunner('top_SDG_genes'), 'top_SDG_pcs': TopSDGPcsRunner('top_SDG_pcs'), 'DOMINO': BnetRunner('DOMINO')} #
+                  'DOMINO': DominoRunner()} # 'top_SDG_genes': TopSDGGenesRunner('top_SDG_genes'), 'top_SDG_pcs': TopSDGPcsRunner('top_SDG_pcs')
 
 
 
