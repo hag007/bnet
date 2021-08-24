@@ -50,9 +50,9 @@ def main():
         network_name = os.path.splitext(os.path.split(network_file)[1])[0]
         network_names.append(network_name)
 
-    metrics=["RF accuracy","SVM accuracy", "SVM AUPR", "SVM AUROC"]
-    null_metrics=["Null SVM AUPR","Null SVM AUROC"]
-    diff_metrics=["SVM AUPR diff","SVM AUROC diff"]
+    metrics=["RF accuracy", "RF AUPR", "RF AUROC","SVM accuracy", "SVM AUPR", "SVM AUROC"]
+    null_metrics=["Null SVM AUPR","Null SVM AUROC", "Null RF AUPR","Null RF AUROC"]
+    diff_metrics=["SVM AUPR diff","SVM AUROC diff", "RF AUPR diff","RF AUROC diff"]
 
     fname = os.path.join(metrics_folder, f"agg_report_{network_name}_{'_'.join(algos)}_arg_max.tsv")  # suffix_str
     df_algo_max_comb = pd.read_csv(fname, sep='\t', index_col=0)
@@ -64,7 +64,7 @@ def main():
 
         suffix_str = f"report_{algo}"
         suffix_str += "_" + network_name
-        phenotypes_df = pd.read_csv(phenotypes_file)
+        phenotypes_df = pd.read_csv(phenotypes_file, sep='\t')
         dataset_files=phenotypes_df.loc[:,"path to genes"]
 
 
@@ -98,12 +98,12 @@ def main():
             if len(params_null) != 0:
                 results = [fetch_metrics_by_name(prm) for prm in params_null]
                 results = [a for a in results if not a is None]
-                df_algo_test_comb.loc[algo, f"Null {metric.split()[-1]}"] = np.mean(results)
+                df_algo_test_comb.loc[algo, f"Null {metric}"] = np.mean(results)
 
             if "AUPR" in metric:
-                df_algo_test_comb.loc[algo, "SVM AUPR diff"]=df_algo_test_comb.loc[algo, "SVM AUPR"]-df_algo_test_comb.loc[algo, f"Null {metric}"]
+                df_algo_test_comb.loc[algo, f"{metric} diff"]=df_algo_test_comb.loc[algo, f"{metric}"]-df_algo_test_comb.loc[algo, f"Null {metric}"]
             if "AUROC" in metric:
-                df_algo_test_comb.loc[algo, "SVM AUROC diff"]=df_algo_test_comb.loc[algo, "SVM AUROC"]-df_algo_test_comb.loc[algo, f"Null {metric}"]
+                df_algo_test_comb.loc[algo, f"{metric} diff"]=df_algo_test_comb.loc[algo, f"{metric}"]-df_algo_test_comb.loc[algo, f"Null {metric}"]
 
     fname = os.path.join(metrics_folder, f"agg_report_{network_name}_{'_'.join(algos)}_test_mean.tsv")  # suffix_str
     df_algo_test_comb.to_csv(fname, sep='\t')
@@ -118,6 +118,7 @@ def fetch_metrics_by_name(args):
     result_folder = os.path.join(true_solutions_folder, "{}_{}_{}_{}".format(dataset_name, network_name, algo, combs_str))
     report_file = os.path.join(result_folder, "report.tsv")
     if os.path.exists(report_file):
+        print(report_file)
         return pd.read_csv(report_file, sep='\t', index_col=0).iloc[0].loc[metric]
     else:
         return None

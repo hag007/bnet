@@ -57,13 +57,14 @@ def main():
     df_algos_max = pd.DataFrame(
         columns=fields)
     df_algo_max_comb = pd.DataFrame()
+    df_ranking= pd.DataFrame()
     for algo in algos:
 
         # p = Pool(5)
         params = []
         combs_str = f"report_{algo}"
 
-        phenotypes_df = pd.read_csv(phenotypes_file)
+        phenotypes_df = pd.read_csv(phenotypes_file, sep='\t')
 
         dataset_files=phenotypes_df.loc[:,"path to genes"]
 
@@ -142,6 +143,9 @@ def main():
         df_algos_median.loc[algo] = df_means.mean(axis=0)
         df_algos_median.loc[algo, "number of combinations"] = df_means.shape[0]
         df_algos_max.loc[algo] = df_means.max(axis=0)
+        cur_algo_ranking=df_means.loc[:,["RF accuracy", "RF AUPR", "RF AUROC", "SVM accuracy","SVM AUPR","SVM AUROC"]].rank(axis=0).applymap(lambda a: int(a >= df_means.shape[0])).sum(axis=1)
+        df_ranking=pd.concat([df_ranking, cur_algo_ranking.to_frame().rename(columns={0:algo})], axis=1)
+
         df_algos_max.loc[algo, "number of combinations"] = df_means.shape[0]
 
         df_max_comb=pd.isnull(df_means[df_means == df_means.max(axis=0)]).applymap(lambda a: not a)
@@ -160,6 +164,8 @@ def main():
     df_algos_max.to_csv(fname, sep='\t')
     fname = os.path.join(metrics_folder, f"agg_report_{network_name}_{'_'.join(algos)}_arg_max.tsv")  # combs_str
     df_algo_max_comb.to_csv(fname, sep='\t')
+    fname = os.path.join(metrics_folder, f"agg_report_{network_name}_{'_'.join(algos)}_ranking.tsv")  # combs_str
+    df_ranking.to_csv(fname, sep='\t')
 
 
 

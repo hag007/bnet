@@ -65,7 +65,7 @@ def calc_prediction(dataset_file, algo, network_file, true_solutions_folder, add
     if pcs_data.shape[0]==0:
         with open(output_file, 'w') as o:
             print(f'conf: {additional_args}\n{output_file}:\n no PCS here...', 'r')
-            o.write("\t".join(["name", "N features", "RF accuracy","SVM accuracy","SVM AUPR","SVM AUROC","Null AUPR","Null AUROC"])+"\n")
+            o.write("\t".join(["name", "N features", "RF accuracy", "RF AUPR", "RF AUROC", "Null RF AUPR", "Null RF AUROC", "SVM accuracy", "SVM AUPR", "SVM AUROC", "Null SVM AUPR", "Null SVM AUROC"])+"\n")
             o.write("\t".join([unique_folder_name, "0", "0", "0", "0", "0", "0", "0"]))
             return
 
