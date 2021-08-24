@@ -25,17 +25,19 @@ def main(dataset_file, algo, network_file, true_solutions_folder, ts, min_temp, 
     params_name = "_".join([str(a) for a in additional_args])
     dataset_name = os.path.splitext(os.path.split(dataset_file)[1])[0]
     network_name = os.path.splitext(os.path.split(network_file)[1])[0]
+    orig_true_solutions = "/home/gaga/hagailevi/omics/output/true_solutions"
+    orig_output_folder = os.path.join(orig_true_solutions,
+                                 "{}_{}_{}_{}/modules".format(dataset_name, network_name, algo, params_name))
+    orig_output_file = os.path.join(orig_output_folder, "modules_summary.tsv")
+
     output_folder = os.path.join(true_solutions_folder,
                                  "{}_{}_{}_{}/modules".format(dataset_name, network_name, algo, params_name))
-    output_file = os.path.join(output_folder, "modules_summary.tsv")
 
-
-    modules = pd.read_csv(output_file, sep='\t')
+    modules = pd.read_csv(orig_output_file, sep='\t')
     num_modules = len(modules)
     num_of_genes = sum(modules['#_genes'])
     active_genes = pd.read_csv(dataset_file, sep='\t')[:num_of_genes].transpose()
     active_genes = active_genes.transpose()['id']
-
 
     try:
         os.makedirs(output_folder)
@@ -50,6 +52,8 @@ def main(dataset_file, algo, network_file, true_solutions_folder, ts, min_temp, 
     ge.columns=[a.split(".")[0] for a in ge.columns]
     ge=ge.reindex(gene_names,axis=1).dropna(axis=1)
     ge_relevant = ge[active_genes]
-    # pca = calc_pca(ge_relevant, num_modules)
-    # pca.to_csv(output_file, sep='\t')
-    return calc_pca(ge_relevant, num_modules)
+    pca = calc_pca(ge_relevant, num_modules)
+    output_file = os.path.join(output_folder, "pcs.tsv")
+    pd.DataFrame(pca).to_csv(output_file, sep='\t', index=False)
+    os.chmod(output_file, 0o777)
+

@@ -5,7 +5,7 @@ import os
 import pandas as pd
 
 from src import constants
-from src.implementations.PCs_as_genes import main as PCs_as_genes_main
+from src.implementations.top_sdg_pcs import main as top_sdg_pcs_main
 from src.utils.ensembl2entrez import ensembl2entrez_convertor
 from src.utils.network import get_network_genes
 from src.utils.go_similarity import init_go_metadata
@@ -13,9 +13,9 @@ from src.utils.go_similarity import init_go_metadata
 from src.runners.abstract_runner import AbstractRunner
 
 
-class PCsAsNoGenesRunner(AbstractRunner):
+class TopSDGPcsRunner(AbstractRunner):
     def __init__(self):
-        super().__init__(f"PCs_as_genes")
+        super().__init__(f"top_SDG_pcs")
 
     def extract_modules_and_bg(self, bg_genes, dest_algo_dir):
         results = open(os.path.join(dest_algo_dir, "modules.txt")).readlines()
@@ -59,7 +59,7 @@ class PCsAsNoGenesRunner(AbstractRunner):
         algo = "BNET_STATIC_STRING"
         if 'algo' in kwargs:
             algo = kwargs['algo']
-        true_solutions_folder = "/home/gaga/hagailevi/omics/output/true_solutions"
+        true_solutions_folder = constants.config_json['true_solutions_folder']
         if 'true_solutions_folder' in kwargs:
             true_solutions_folder = kwargs['true_solutions_folder']
         ts = 100
@@ -84,12 +84,10 @@ class PCsAsNoGenesRunner(AbstractRunner):
         if 'activity_baseline' in kwargs:
             activity_baseline = kwargs['activity_baseline']
 
-        active_genes_file, bg_genes = self.init_params(dataset_file_name, network_file_name, output_folder)
-        modules = PCs_as_genes_main(dataset_file=dataset_file_name, network_file=network_file_name,
+        top_sdg_pcs_main(dataset_file=dataset_file_name, network_file=network_file_name,
                             slice_threshold=slice_threshold, module_threshold=module_threshold, algo=algo,
                                true_solutions_folder=true_solutions_folder, ts=ts, min_temp=min_temp, temp_factor=temp_factor,
                              sim_factor=sim_factor, activity_baseline=activity_baseline)
-        all_bg_genes = [bg_genes for x in modules]
-        return modules, all_bg_genes
+        return None, None
 
 
