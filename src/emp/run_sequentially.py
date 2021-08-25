@@ -54,6 +54,7 @@ def main():
     parser.add_argument('--dataset_files', dest='dataset_files', default=constants.config_json["dataset_files"])
     parser.add_argument('--phenotypes_file', dest='phenotypes_file', default=constants.config_json["phenotypes_file"])
     parser.add_argument('--algo', dest='algo', default=constants.config_json["algo"])
+    parser.add_argument('--compare_algo', dest='compare_algo', default=constants.config_json["compare_algo"])
     parser.add_argument('--network_files', dest='network_files', default=constants.config_json["network_files"])
     parser.add_argument('--go_folder', dest='go_folder', default=constants.config_json["go_folder"])
     parser.add_argument('--true_solutions_folder', dest='true_solutions_folder', default=constants.config_json["true_solutions_folder"])
@@ -67,6 +68,7 @@ def main():
     dataset_files=args.dataset_files
     phenotypes_file=args.phenotypes_file
     algo=args.algo
+    compare_algo = args.compare_algo
     network_files=args.network_files
     go_folder=args.go_folder
     true_solutions_folder=args.true_solutions_folder
@@ -76,11 +78,11 @@ def main():
     processes = args.processes.split(",")
 
     run_sequentially(algo, network_files, phenotypes_file, processes, go_folder,
-                     true_solutions_folder, pf, additional_args, tuning_comb_args)
+                     true_solutions_folder, pf, additional_args, tuning_comb_args, compare_algo)
 
 
 def run_sequentially(algo, network_files, phenotypes_file, processes, go_folder,
-                     true_solutions_folder, pf, additional_args, tuning_comb_args):
+                     true_solutions_folder, pf, additional_args, tuning_comb_args, compare_algo):
     phenotypes_df = pd.read_csv(phenotypes_file, sep='\t')
     algo_param = "{}".format(algo)
     true_solutions_folder_param = "{}".format(true_solutions_folder)
@@ -117,14 +119,17 @@ def run_sequentially(algo, network_files, phenotypes_file, processes, go_folder,
                 #         pr.join()
                 #     prs=[]
                 #
-                params.append(
-                    [additional_args, phenotypes_params, algo_param, comb, dataset_file_params, go_folder_param,
-                     network_file_param, processes, true_solutions_folder_param, tuning_comb])
-    p.map(execute_one_series, params)
+
+                params.append([additional_args, phenotypes_params, algo_param, compare_algo, comb, dataset_file_params, go_folder_param,
+                network_file_param, processes, true_solutions_folder_param, tuning_comb])
+
+
+    p.map(execute_one_series,params)
+
 
 
 def execute_one_series(args):
-    additional_args, phenotypes_params, algo_param, comb, dataset_file_params, go_folder_param, network_file_param, processes, true_solutions_folder_param, tuning_comb = args
+    additional_args, phenotypes_params, algo_param, compare_algo, comb, dataset_file_params, go_folder_param, network_file_param, processes, true_solutions_folder_param, tuning_comb = args
     tuning_args = {k: v for k, v in zip(tuning_comb.keys(), comb)}
     additional_args = json.loads(additional_args)
     additional_args.update(tuning_args)
@@ -148,7 +153,7 @@ def execute_one_series(args):
 
     params_by_process = {
         "generate_solution": {"dataset_file" : dataset_file_params, "algo" : algo_param, "network_file" : network_file_param , "go_folder" : go_folder_param,
-                              "true_solutions_folder": true_solutions_folder_param, "additional_args" : additional_args_param},
+                              "true_solutions_folder": true_solutions_folder_param, "additional_args" : additional_args_param, "compare_algo": compare_algo},
         "calc_pcs": {"dataset_file" : dataset_file_params, "algo" : algo_param, "network_file" : network_file_param ,
                               "true_solutions_folder": true_solutions_folder_param, "additional_args" : additional_args_param, "phenotype_args":phenotypes_params},
         "calc_prediction": {"dataset_file" : dataset_file_params, "algo" : algo_param, "network_file" : network_file_param ,

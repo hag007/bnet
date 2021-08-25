@@ -34,7 +34,7 @@ def main():
     generate_solution(dataset_file, algo, go_folder, network_file, true_solutions_folder, additional_args, compare_algo, compare_args)
 
 
-def generate_solution(dataset_file, algo, go_folder, network_file, true_solutions_folder, additional_args, compare_algo=None, compare_args=None):
+def generate_solution(dataset_file, algo, go_folder, network_file, true_solutions_folder, additional_args, compare_algo=None):
 
     print(f'start ({(dataset_file, algo, go_folder, network_file, true_solutions_folder ,additional_args)})')
     # init_state(go_folder)
@@ -49,12 +49,12 @@ def generate_solution(dataset_file, algo, go_folder, network_file, true_solution
     output_folder = os.path.join(true_solutions_folder,
                                  "{}_{}_{}_{}".format(dataset_name, network_name, algo, params_name))
     if compare_algo is not None:
-        compare_args_json = json.loads(compare_args)
-        compare_params_name = "_".join([str(compare_args_json[a]) for a in \
-                                        ["ts", "min_temp", "temp_factor", "slice_threshold", "module_threshold",
-                                         "sim_factor",
-                                         "activity_baseline"]])
-        compare_folder = os.path.join(true_solutions_folder, "{}_{}_{}_{}".format(dataset_name,network_name,compare_algo,compare_params_name))
+        # compare_args_json = json.loads(compare_args)
+        # compare_params_name = "_".join([str(compare_args_json[a]) for a in \
+        #                                 ["ts", "min_temp", "temp_factor", "slice_threshold", "module_threshold",
+        #                                  "sim_factor",
+        #                                  "activity_baseline"]])
+        compare_folder = os.path.join(true_solutions_folder, "{}_{}_{}_{}".format(dataset_name,network_name,compare_algo,params_name))
         additional_args_json['compare_folder'] = compare_folder
 
     try:
@@ -65,3 +65,4 @@ def generate_solution(dataset_file, algo, go_folder, network_file, true_solution
 
 if __name__=='__main__':
     main()
+
