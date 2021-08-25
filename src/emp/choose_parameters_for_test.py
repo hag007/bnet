@@ -54,7 +54,7 @@ def main():
     null_metrics=["Null SVM AUPR","Null SVM AUROC", "Null RF AUPR","Null RF AUROC"]
     diff_metrics=["SVM AUPR diff","SVM AUROC diff", "RF AUPR diff","RF AUROC diff"]
 
-    fname = os.path.join(metrics_folder, f"agg_report_{network_name}_{'_'.join(algos)}_arg_max.tsv")  # suffix_str
+    fname = os.path.join(metrics_folder, f"agg_report_{network_name}_{'_'.join(algos)}_single_arg_max.tsv")  # suffix_str
     df_algo_max_comb = pd.read_csv(fname, sep='\t', index_col=0)
     df_algo_max_comb = df_algo_max_comb.transpose()
     df_algo_test_comb = df_algo_max_comb.copy()
@@ -93,7 +93,7 @@ def main():
 
             results=[fetch_metrics_by_name(prm) for prm in params]
             results=[a for a in results if not a is None]
-            df_algo_test_comb.loc[algo, metric]=np.mean(results)
+            df_algo_test_comb.loc[algo, metric]=np.nanmean(results)
 
             if len(params_null) != 0:
                 results = [fetch_metrics_by_name(prm) for prm in params_null]
@@ -119,7 +119,7 @@ def fetch_metrics_by_name(args):
     report_file = os.path.join(result_folder, "report.tsv")
     if os.path.exists(report_file):
         print(report_file)
-        return pd.read_csv(report_file, sep='\t', index_col=0).iloc[0].loc[metric]
+        return pd.read_csv(report_file, sep='\t', index_col=0).fillna(0).iloc[0].loc[metric]
     else:
         return None
 

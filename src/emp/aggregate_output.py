@@ -51,6 +51,7 @@ def main():
     combs = list(itertools.product(*tuning_comb.values()))
 
     fields=["N features", "RF accuracy", "RF AUPR", "RF AUROC", "Null RF AUPR", "Null RF AUROC", "SVM accuracy","SVM AUPR","SVM AUROC","Null SVM AUPR","Null SVM AUROC","SVM AUPR diff","SVM AUROC diff", "number of datasets"]
+    metric_fields = ["RF accuracy", "RF AUPR", "RF AUROC", "SVM accuracy", "SVM AUPR", "SVM AUROC"]
     df_algos_mean=pd.DataFrame(columns=fields)
     df_algos_median = pd.DataFrame(
         columns=fields)
@@ -79,7 +80,7 @@ def main():
 
             network_names=[]
             for network_file in network_files:
-                network_name = os.path.splitext(os.path.split(network_file)[1])[0]
+                network_name = os.path.splitext(os.path.split(network_file)[-1])[0]
                 combs_str += "_" + network_name
                 network_names.append(network_name)
 
@@ -143,7 +144,10 @@ def main():
         df_algos_median.loc[algo] = df_means.mean(axis=0)
         df_algos_median.loc[algo, "number of combinations"] = df_means.shape[0]
         df_algos_max.loc[algo] = df_means.max(axis=0)
-        cur_algo_ranking=df_means.loc[:,["RF accuracy", "RF AUPR", "RF AUROC", "SVM accuracy","SVM AUPR","SVM AUROC"]].rank(axis=0).applymap(lambda a: int(a >= df_means.shape[0])).sum(axis=1)
+        # cur_algo_ranking=df_means.loc[:,["RF accuracy", "RF AUPR", "RF AUROC", "SVM accuracy","SVM AUPR","SVM AUROC"]].rank(axis=0).applymap(lambda a: 1 if a == df_means.shape[0] else 0.5 if a == df_means.shape[0]-1 else 0).sum(axis=1)
+        cur_algo_ranking = df_means.loc[:,
+                           ["RF accuracy", "RF AUPR", "RF AUROC", "SVM accuracy", "SVM AUPR", "SVM AUROC"]].apply(lambda a:  a.max()-a  ,axis=0).applymap(lambda a: 1-min(a, 0.01)*100).sum(
+            axis=1)
         df_ranking=pd.concat([df_ranking, cur_algo_ranking.to_frame().rename(columns={0:algo})], axis=1)
 
         df_algos_max.loc[algo, "number of combinations"] = df_means.shape[0]
@@ -154,6 +158,17 @@ def main():
         df_max_comb=df_max_comb.apply(lambda a: list(df_max_comb.index[a]))
         if not df_max_comb.empty:
             df_algo_max_comb.loc[:,algo]=pd.DataFrame(df_max_comb).iloc[0]
+
+    # df_ranking.apply(lambda a:  (a.max()==a).astype(int)  ,axis=1)
+
+
+
+
+    fname = os.path.join(metrics_folder, f"agg_report_{network_name}_{'_'.join(algos)}_single_arg_max.tsv")  # combs_str
+    df_single_arg_max=pd.concat([df_ranking.apply(lambda b: b.index.values[b.argmax()], axis=0).to_frame(name=a) for a in metric_fields], axis =1).transpose()
+    print(fname)
+    df_single_arg_max.to_csv(fname, sep='\t')
+
 
 
     fname = os.path.join(metrics_folder, f"agg_report_{network_name}_{'_'.join(algos)}_mean.tsv")  # combs_str
@@ -189,3 +204,4 @@ def fetch_metrics(args):
 
 if __name__ == "__main__":
     main()
+

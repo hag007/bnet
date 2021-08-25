@@ -64,6 +64,7 @@ def main():
                         default=constants.config_json["tuning_comb"])
     args = parser.parse_args()
 
+    dataset_files=args.dataset_files
     phenotypes_file=args.phenotypes_file
     algo=args.algo
     network_files=args.network_files
@@ -74,29 +75,35 @@ def main():
     tuning_comb_args = args.tuning_comb
     processes = args.processes.split(",")
 
-    phenotypes_df = pd.read_csv(phenotypes_file, sep='\t')
+    run_sequentially(algo, network_files, phenotypes_file, processes, go_folder,
+                     true_solutions_folder, pf, additional_args, tuning_comb_args)
 
-    algo_param="{}".format(algo)
+
+def run_sequentially(algo, network_files, phenotypes_file, processes, go_folder,
+                     true_solutions_folder, pf, additional_args, tuning_comb_args):
+    phenotypes_df = pd.read_csv(phenotypes_file, sep='\t')
+    algo_param = "{}".format(algo)
     true_solutions_folder_param = "{}".format(true_solutions_folder)
     go_folder_param = "{}".format(go_folder)
     pf_param = "{}".format(pf)
     tuning_comb = json.loads(str(tuning_comb_args))
-    combs=list(itertools.product(*tuning_comb.values()))
-    p=Pool(int(pf))
-    params=[]
+    combs = list(itertools.product(*tuning_comb.values()))
+    p = Pool(int(pf))
+    params = []
     for comb in combs:
         for i, row in phenotypes_df.iterrows():
             dataset_file_params = "{}".format(row.loc["path to genes"])
             tcga_path = row.loc["path to TCGA file"]
             var_name = row.loc["name of variable"]
-            val1 = row.loc['value1'].replace("'",'\\\"')
-            val2 = row.loc['value2'].replace("'",'\\\"')
+            val1 = row.loc['value1'].replace("'", '\\\"')
+            val2 = row.loc['value2'].replace("'", '\\\"')
             # phenotypes_params = '--phenotype_args "{\"path to TCGA file\": \"{}\", \"name of variable\": \"{}\", \"value1\" : [{}], \"value2\" : [{}]}"'.format(\
             #                                     tcga_path, var_name,val1,val2)
 
-            phenotypes_params = json.loads('"{\\\"path to TCGA file\\\": \\\"'+tcga_path+'\\\", \\\"name of variable\\\": \\\"'+var_name+'\\\", \\\"value1\\\" : '+val1+', \\\"value2\\\" : '+val2+'}"')
+            phenotypes_params = json.loads(
+                '"{\\\"path to TCGA file\\\": \\\"' + tcga_path + '\\\", \\\"name of variable\\\": \\\"' + var_name + '\\\", \\\"value1\\\" : ' + val1 + ', \\\"value2\\\" : ' + val2 + '}"')
 
-            prs=[]
+            prs = []
             for network_file in network_files:
                 network_file_param = network_file
 
@@ -110,11 +117,10 @@ def main():
                 #         pr.join()
                 #     prs=[]
                 #
-                params.append([additional_args, phenotypes_params, algo_param, comb, dataset_file_params, go_folder_param,
-                network_file_param, processes, true_solutions_folder_param, tuning_comb])
-
-
-    p.map(execute_one_series,params)
+                params.append(
+                    [additional_args, phenotypes_params, algo_param, comb, dataset_file_params, go_folder_param,
+                     network_file_param, processes, true_solutions_folder_param, tuning_comb])
+    p.map(execute_one_series, params)
 
 
 def execute_one_series(args):
